@@ -2,22 +2,24 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Shorts Video Oluşturucu</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Reklamvitrin</title>
+  <meta name="theme-color" content="#064e3b" />
+  <meta name="description" content="Reklamvitrin — senaryo, ürün metni ve platform reklam görselleri." />
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/img/favicon-32.png" />
+  <link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/styles.css?v=twin5" />
 </head>
 <body>
-  <div class="bg-orb bg-orb-a" aria-hidden="true"></div>
-  <div class="bg-orb bg-orb-b" aria-hidden="true"></div>
+  <a class="skip-link" href="#mainContent">İçeriğe geç</a>
 
   <header class="topbar">
-    <div class="brand">
-      <span class="brand-mark" aria-hidden="true"></span>
-      <span class="brand-name">Shorts Video Oluşturucu</span>
-    </div>
+    <a class="brand" href="/" aria-label="Reklamvitrin ana sayfa">
+      <img class="brand-logo" src="/static/img/logo-reklamvitrin.png" alt="Reklamvitrin.com" width="240" height="68" decoding="async" />
+    </a>
     <div class="topbar-right" id="userBar" hidden>
       <span class="credit-chip" id="creditChip">— kredi</span>
       <a class="ghost-btn" id="adminLink" href="/admin" hidden>Admin</a>
@@ -26,11 +28,12 @@
     </div>
   </header>
 
-  <main>
+  <main id="mainContent">
     <!-- Auth -->
     <section class="panel auth-panel" id="authPanel">
+      <p class="auth-kicker">Reklamvitrin.com</p>
       <h1 class="display">Stüdyoya gir</h1>
-      <p class="lede">API anahtarlarını bağla, brief yaz, profesyonel senaryoya çevir.</p>
+      <p class="lede">Senaryo, ürün metni ve platform görselleri — satış odaklı.</p>
 
       <div class="tabs" role="tablist">
         <button type="button" class="tab active" data-tab="login">Giriş</button>
@@ -39,14 +42,24 @@
 
       <form id="loginForm" class="stack">
         <label>E-posta <input type="email" name="email" required autocomplete="email" /></label>
-        <label>Şifre <input type="password" name="password" required minlength="8" autocomplete="current-password" /></label>
+        <label>Şifre
+          <span class="field-with-action">
+            <input type="password" name="password" required minlength="8" autocomplete="current-password" />
+            <button type="button" class="field-action toggle-pass" aria-label="Şifreyi göster">Göster</button>
+          </span>
+        </label>
         <button type="submit" class="primary-btn">Giriş yap</button>
       </form>
 
       <form id="registerForm" class="stack" hidden>
-        <label>İsim <input type="text" name="display_name" maxlength="120" /></label>
+        <label>İsim <input type="text" name="display_name" maxlength="120" autocomplete="name" /></label>
         <label>E-posta <input type="email" name="email" required autocomplete="email" /></label>
-        <label>Şifre <input type="password" name="password" required minlength="8" autocomplete="new-password" /></label>
+        <label>Şifre
+          <span class="field-with-action">
+            <input type="password" name="password" required minlength="8" autocomplete="new-password" />
+            <button type="button" class="field-action toggle-pass" aria-label="Şifreyi göster">Göster</button>
+          </span>
+        </label>
         <button type="submit" class="primary-btn">Hesap oluştur</button>
       </form>
       <p class="form-error" id="authError" hidden></p>
@@ -56,10 +69,16 @@
     <section class="studio" id="studioPanel" hidden>
       <div class="studio-grid">
         <div class="compose">
-          <h1 class="display">Senaryo stüdyosu</h1>
-          <p class="lede">Fikir notunu yaz; sistem Shorts uzmanı gibi hook→payoff senaryosuna çevirir (metni tekrar etmez).</p>
+          <h1 class="display" id="studioTitle">Senaryo</h1>
+          <p class="lede" id="studioLede">Brief’i doldur, reklam senaryosunu üret.</p>
 
-          <form id="scenarioForm" class="stack compose-form">
+          <div class="studio-tabs" role="tablist" id="studioTabs">
+            <button type="button" class="tab active" data-studio="scenario">Senaryo</button>
+            <button type="button" class="tab" data-studio="product">Ürün &amp; Metin</button>
+            <button type="button" class="tab" data-studio="visuals">Platform Görselleri</button>
+          </div>
+
+          <form id="scenarioForm" class="stack compose-form studio-pane" data-pane="scenario">
             <div class="row-2">
               <label>Dil
                 <select name="language" id="language">
@@ -75,118 +94,282 @@
               </label>
             </div>
             <div class="row-2">
-              <label>Başlık (opsiyonel)
-                <input type="text" name="title" maxlength="200" placeholder="Örn. Yaz kampanyası" />
+              <label>Kampanya başlığı (opsiyonel)
+                <input type="text" name="title" maxlength="200" placeholder="Örn. Yaz indirimi — DM’den sipariş" />
               </label>
-              <label>Üslup
+              <label>Reklam formatı
                 <select name="style">
-                  <option value="shorts-punchy">Shorts · punchy</option>
-                  <option value="sinematik">Sinematik</option>
-                  <option value="enerjik">Enerjik</option>
-                  <option value="minimal">Minimal</option>
-                  <option value="eğitici">Eğitici</option>
+                  <option value="pas">Problem → Çözüm (PAS)</option>
+                  <option value="ugc">UGC / Testimonial</option>
+                  <option value="before-after">Önce / Sonra</option>
+                  <option value="offer-urgency">Teklif + Aciliyet</option>
+                  <option value="social-proof">Sosyal kanıt</option>
                 </select>
               </label>
             </div>
-            <label>Hedef kitle (opsiyonel)
-              <input type="text" name="audience" maxlength="200" placeholder="Örn. 25–40 yaş girişimciler" />
+            <label>Ürün / teklif
+              <input type="text" name="offer" maxlength="300" required
+                placeholder="Örn. 14 günde cilt bakımı seti — ilk siparişte %20" />
             </label>
-            <label>Video brief’i
-              <textarea name="raw_input" rows="5" required minlength="10" maxlength="4000"
-                placeholder="Fikir notu yaz (kopyalanmaz). Örn: kahve markası yaz kampanyası — serinlik + şehir enerjisi"></textarea>
+            <label>Müşteri acı noktası
+              <input type="text" name="pain_point" maxlength="300" required
+                placeholder="Örn. Pahalı kremler işe yaramıyor, zaman kaybı" />
+            </label>
+            <div class="brief-presets" id="briefPresets" aria-label="Hızlı sektör şablonları">
+              <span class="presets-label">Şablon</span>
+              <button type="button" class="preset-chip" data-preset="beauty">Güzellik</button>
+              <button type="button" class="preset-chip" data-preset="saas">SaaS / Ajans</button>
+              <button type="button" class="preset-chip" data-preset="food">Restoran</button>
+              <button type="button" class="preset-chip" data-preset="fitness">Fitness</button>
+              <button type="button" class="preset-chip" data-preset="ecommerce">E-ticaret</button>
+            </div>
+            <div class="row-2">
+              <label>Hedef aksiyon
+                <select name="desired_action">
+                  <option value="dm">DM at</option>
+                  <option value="link_click">Linke tıkla</option>
+                  <option value="buy">Satın al</option>
+                  <option value="lead_form">Form doldur</option>
+                  <option value="whatsapp">WhatsApp yaz</option>
+                </select>
+              </label>
+              <label>Hedef kitle (opsiyonel)
+                <input type="text" name="audience" maxlength="200" placeholder="Örn. 25–40 yaş, cilt bakımı arayan kadınlar" />
+              </label>
+            </div>
+            <label>Ek brief (opsiyonel detay)
+              <textarea name="raw_input" rows="4" required minlength="10" maxlength="4000"
+                placeholder="Marka tonu, rakip farkı, yasaklar, kanıt (yorum/satış sayısı)…"></textarea>
             </label>
             <button type="submit" class="primary-btn" id="convertBtn">
-              AI1: Viral Senaryo Yaz (15 kredi)
+              Reklam senaryosu yaz · 15 kredi
             </button>
             <p class="form-error" id="scenarioError" hidden></p>
+          </form>
+
+          <!-- Ürün görseli + metin -->
+          <form id="productForm" class="stack compose-form studio-pane" data-pane="product" hidden>
+            <label>Ürün görseli
+              <input type="file" id="productImage" accept="image/jpeg,image/png,image/webp" required />
+            </label>
+            <div class="product-preview" id="productPreview" hidden>
+              <img id="productPreviewImg" alt="Ürün önizleme" />
+            </div>
+            <div class="row-2">
+              <label>Dil
+                <select name="language" id="productLanguage">
+                  <option value="tr">Türkçe</option>
+                  <option value="en">English</option>
+                </select>
+              </label>
+              <label>Hedef aksiyon
+                <select name="desired_action" id="productAction">
+                  <option value="dm">DM at</option>
+                  <option value="link_click">Linke tıkla</option>
+                  <option value="buy">Satın al</option>
+                  <option value="lead_form">Form doldur</option>
+                  <option value="whatsapp">WhatsApp yaz</option>
+                </select>
+              </label>
+            </div>
+            <label>Ürün / teklif
+              <input type="text" id="productOffer" maxlength="300" placeholder="Örn. İlk siparişte %20 + ücretsiz kargo" />
+            </label>
+            <label>Acı nokta
+              <input type="text" id="productPain" maxlength="300" placeholder="Örn. Pahalı alternatifler işe yaramıyor" />
+            </label>
+            <label>Ek bağlam (opsiyonel)
+              <textarea id="productContext" rows="2" maxlength="2000" placeholder="Marka tonu, yasaklar, kanıt…"></textarea>
+            </label>
+            <button type="button" class="primary-btn" id="analyzeBtn">Ürünü analiz et · 10 kredi</button>
+            <p class="form-error" id="analyzeError" hidden></p>
+
+            <fieldset class="check-grid" id="copyTypeGrid">
+              <legend>Üretilecek metinler</legend>
+            </fieldset>
+            <button type="button" class="primary-btn" id="copyGenBtn" disabled>Metinleri üret · 12 kredi</button>
+            <p class="form-error" id="copyGenError" hidden></p>
+          </form>
+
+          <!-- Platform görselleri -->
+          <form id="visualForm" class="stack compose-form studio-pane" data-pane="visuals" hidden>
+            <label>Ürün / reklam görseli
+              <input type="file" id="visualImage" accept="image/jpeg,image/png,image/webp" />
+            </label>
+            <div class="product-preview" id="visualPreview" hidden>
+              <img id="visualPreviewImg" alt="Görsel önizleme" />
+            </div>
+            <fieldset class="check-grid" id="platformGrid">
+              <legend>Platformlar</legend>
+            </fieldset>
+            <label>Görsel üslup
+              <select id="visualStyle">
+                <option value="pas">Problem → Çözüm</option>
+                <option value="ugc">UGC</option>
+                <option value="before-after">Önce / Sonra</option>
+                <option value="offer-urgency">Teklif + Aciliyet</option>
+                <option value="social-proof">Sosyal kanıt</option>
+              </select>
+            </label>
+            <label>Teklif (opsiyonel)
+              <input type="text" id="visualOffer" maxlength="300" placeholder="Örn. İlk siparişte %20" />
+            </label>
+            <button type="button" class="primary-btn" id="visualGenBtn" disabled>Platform görselleri üret</button>
+            <p class="form-error" id="visualGenError" hidden></p>
           </form>
 
           <div class="history-block" id="historyBlock">
             <h3 class="history-title">Geçmiş senaryolar</h3>
             <div class="history-list" id="historyList">
-              <p class="lede tight">Henüz kayıt yok.</p>
+              <p class="lede tight">Henüz senaryo yok — ilk brief’ini yaz.</p>
             </div>
           </div>
         </div>
 
         <aside class="result" id="resultPanel" aria-live="polite">
-          <div class="result-empty" id="resultEmpty">
-            <p>Henüz senaryo yok. Soldan brief yazıp çevir.</p>
+          <!-- Modül: Senaryo -->
+          <div class="module-result" data-module-result="scenario" id="moduleResultScenario">
+            <div class="result-empty" id="resultEmpty">
+              <img class="empty-mark" src="/static/img/logo-mark.png" alt="" width="56" height="56" aria-hidden="true" />
+              <p class="empty-title">Senaryo sonucu</p>
+              <p>Soldan brief’i gönder — özet, hook, senaryo ve kopya burada.</p>
+            </div>
+
+            <div id="resultContent" hidden>
+              <div class="result-head">
+                <h2 id="resultTitle"></h2>
+                <span class="badge" id="resultBadge" hidden>mock</span>
+              </div>
+
+              <div class="result-steps" id="resultSteps" role="tablist" aria-label="Senaryo adımları">
+                <button type="button" class="result-step is-active" data-rstep="1" role="tab" aria-selected="true">
+                  <span class="result-step-n">1</span><span class="result-step-t">Özet</span>
+                </button>
+                <button type="button" class="result-step" data-rstep="2" role="tab" aria-selected="false">
+                  <span class="result-step-n">2</span><span class="result-step-t">Hook</span>
+                </button>
+                <button type="button" class="result-step" data-rstep="3" role="tab" aria-selected="false">
+                  <span class="result-step-n">3</span><span class="result-step-t">Senaryo</span>
+                </button>
+                <button type="button" class="result-step" data-rstep="4" role="tab" aria-selected="false">
+                  <span class="result-step-n">4</span><span class="result-step-t">Revize</span>
+                </button>
+                <button type="button" class="result-step" data-rstep="5" role="tab" aria-selected="false">
+                  <span class="result-step-n">5</span><span class="result-step-t">Kopyala</span>
+                </button>
+              </div>
+              <p class="result-step-hint" id="resultStepHint">Kampanyanın özeti ve skoru.</p>
+
+              <div class="result-pane is-active" data-rpane="1">
+                <div class="conversion-score" id="conversionScore" hidden>
+                  <div class="score-ring" id="scoreRing"><span id="scoreValue">—</span></div>
+                  <div class="score-copy">
+                    <strong>Dönüşüm skoru</strong>
+                    <p id="scoreBreakdown" class="lede tight"></p>
+                  </div>
+                </div>
+                <p class="hook" id="resultHook"></p>
+                <div class="meta-line" id="resultMeta"></div>
+                <div class="result-foot">
+                  <div><strong>Müzik:</strong> <span id="resultMusic"></span></div>
+                  <div><strong>CTA:</strong> <span id="resultCta"></span></div>
+                </div>
+                <p class="scenario-id">Senaryo #<span id="resultId"></span></p>
+                <button type="button" class="primary-btn result-next" data-goto="2">Hook seç →</button>
+              </div>
+
+              <div class="result-pane" data-rpane="2" hidden>
+                <div class="hook-variants" id="hookVariants">
+                  <p class="lede tight">İlk 3 saniye için en güçlü kancayı seç.</p>
+                  <div class="hook-list" id="hookList"></div>
+                  <p class="form-error" id="hookError" hidden></p>
+                  <p class="lede tight" id="hookEmptyHint" hidden>Tek hook var — sonraki adıma geçebilirsin.</p>
+                </div>
+                <div class="result-nav">
+                  <button type="button" class="ghost-btn result-next" data-goto="1">← Geri</button>
+                  <button type="button" class="primary-btn result-next" data-goto="3">Senaryo →</button>
+                </div>
+              </div>
+
+              <div class="result-pane" data-rpane="3" hidden>
+                <h3>Seslendirme</h3>
+                <p class="voiceover" id="resultVoice"></p>
+                <h3>Sahneler</h3>
+                <ol class="scenes" id="resultScenes"></ol>
+                <div class="result-nav">
+                  <button type="button" class="ghost-btn result-next" data-goto="2">← Geri</button>
+                  <button type="button" class="primary-btn result-next" data-goto="4">Revize →</button>
+                </div>
+              </div>
+
+              <div class="result-pane" data-rpane="4" hidden>
+                <div class="scenario-discuss stack" id="scenarioDiscuss">
+                  <p class="lede tight">Kısa bir not yaz — ilgili sahneye uygulanır.</p>
+                  <div class="discuss-thread" id="discussThread"></div>
+                  <label>Ne değişsin?
+                    <textarea id="discussInput" rows="3" maxlength="2000"
+                      placeholder="Örn. Hook daha sert olsun"></textarea>
+                  </label>
+                  <button type="button" class="primary-btn" id="discussBtn">Uygula · 10 kredi</button>
+                  <p class="form-error" id="discussError" hidden></p>
+                </div>
+                <div class="result-nav">
+                  <button type="button" class="ghost-btn result-next" data-goto="3">← Geri</button>
+                  <button type="button" class="primary-btn result-next" data-goto="5">Kopyala →</button>
+                </div>
+              </div>
+
+              <div class="result-pane" data-rpane="5" hidden>
+                <div class="copy-panel">
+                  <p class="lede tight" id="copyHint">Hazırsan senaryoyu panoya al.</p>
+                  <div class="copy-actions">
+                    <button type="button" class="primary-btn" id="unlockCopyBtn" hidden>Kopyalamayı aç · 5 kredi</button>
+                    <button type="button" class="primary-btn" id="copyScenarioBtn" hidden>Senaryoyu kopyala</button>
+                  </div>
+                  <p class="form-error" id="copyError" hidden></p>
+                </div>
+                <div class="result-nav">
+                  <button type="button" class="ghost-btn result-next" data-goto="4">← Geri</button>
+                </div>
+              </div>
+            </div>
           </div>
-          <div id="resultContent" hidden>
-            <div class="result-head">
-              <h2 id="resultTitle"></h2>
-              <span class="badge" id="resultBadge" hidden>mock</span>
-            </div>
-            <p class="hook" id="resultHook"></p>
-            <div class="meta-line" id="resultMeta"></div>
-            <h3>Seslendirme</h3>
-            <p class="voiceover" id="resultVoice"></p>
-            <h3>Sahneler</h3>
-            <ol class="scenes" id="resultScenes"></ol>
-            <div class="result-foot">
-              <div><strong>Müzik:</strong> <span id="resultMusic"></span></div>
-              <div><strong>CTA:</strong> <span id="resultCta"></span></div>
-            </div>
-            <p class="scenario-id">Senaryo #<span id="resultId"></span> kaydedildi</p>
-            <div class="copy-actions">
-              <button type="button" class="ghost-btn" id="unlockCopyBtn" hidden>Kopyalamayı aç (5 kredi)</button>
-              <button type="button" class="primary-btn" id="copyScenarioBtn" hidden>Senaryoyu kopyala</button>
-            </div>
-            <p class="form-error" id="copyError" hidden></p>
-            <p class="copy-hint" id="copyHint" hidden>Kilitli önizleme — tam metni kopyalamak için kredi harca.</p>
 
-            <div class="scenario-discuss stack" id="scenarioDiscuss">
-              <h3>Tartışma paneli</h3>
-              <p class="lede tight">Yönetmenle senaryoyu konuş. Notun ilgili sahneye uygulanır.</p>
-              <div class="discuss-thread" id="discussThread"></div>
-              <label>Mesajın
-                <textarea id="discussInput" rows="3" maxlength="2000"
-                  placeholder="Örn. Hook daha sert olsun / Sahne 3 anlatımını kısalt / CTA’yı değiştir"></textarea>
-              </label>
-              <button type="button" class="primary-btn" id="discussBtn">Gönder & uygula (10 kredi)</button>
-              <p class="form-error" id="discussError" hidden></p>
+          <!-- Modül: Ürün & Metin -->
+          <div class="module-result" data-module-result="product" id="moduleResultProduct" hidden>
+            <div class="result-empty" id="productResultEmpty">
+              <p class="empty-title">Ürün &amp; metin</p>
+              <p>Görseli analiz et, sonra metinleri burada gör.</p>
             </div>
+            <div id="productResultBody" hidden>
+              <div id="analysisBox" class="analysis-box" hidden>
+                <h3>Görsel analizi</h3>
+                <pre id="analysisJson" class="analysis-pre"></pre>
+              </div>
+              <div id="copiesOut" class="copies-out"></div>
+            </div>
+          </div>
 
-            <button type="button" class="primary-btn produce-btn" id="produceBtn">
-              AI2+AI3: Görsel Üret & Kurguya Ver (100 kredi)
-            </button>
-            <p class="form-error" id="produceError" hidden></p>
+          <!-- Modül: Platform görselleri -->
+          <div class="module-result" data-module-result="visuals" id="moduleResultVisuals" hidden>
+            <div class="result-empty" id="visualResultEmpty">
+              <p class="empty-title">Platform görselleri</p>
+              <p>Platform seçip üret — çıktılar burada.</p>
+            </div>
+            <div id="visualsOut" class="visuals-out" hidden></div>
           </div>
         </aside>
       </div>
-
-      <!-- Modül 3/4: video + geliştir -->
-      <section class="player-section" id="playerSection" hidden>
-        <div class="player-grid">
-          <div class="player-frame">
-            <div class="player-head">
-              <h2 class="display small">Shorts önizleme</h2>
-              <span class="badge" id="jobBadge" hidden>mock</span>
-              <span class="meta-line" id="jobMeta"></span>
-            </div>
-            <iframe id="previewFrame" title="HTML yedek" class="preview-frame" hidden></iframe>
-            <video id="videoPlayer" class="preview-frame" controls playsinline preload="metadata"></video>
-            <a id="downloadVideo" class="ghost-btn" href="#" download hidden style="margin-top:.6rem;text-align:center;text-decoration:none">MP4 indir</a>
-            <audio id="audioPlayer" controls class="audio-player" hidden></audio>
-          </div>
-          <div class="refine-panel stack">
-            <h3>Eleştiri & Geliştir</h3>
-            <div id="critiqueBox" class="critique-box" hidden></div>
-            <div id="sceneThumbs" class="scene-thumbs"></div>
-            <p class="lede tight">Yönetmene söyle: yalnız ilgili sahne/görsel/metin güncellenir, kurgu yeniden birleşir.</p>
-            <label>Eleştirin
-              <textarea id="refineInput" rows="4" maxlength="2000"
-                placeholder="Örn. Sahne 2 çok yavaş / Hook daha çarpıcı olsun / Sahne 3 görselini daha sinematik yap"></textarea>
-            </label>
-            <button type="button" class="primary-btn" id="refineBtn">Revize et (35 kredi)</button>
-            <p class="form-error" id="refineError" hidden></p>
-            <div id="revisionList" class="revision-list"></div>
-          </div>
-        </div>
-      </section>
     </section>
   </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <span class="footer-brand">Reklamvitrin.com</span>
+      <span class="footer-sep" aria-hidden="true">·</span>
+      <span>Ajans kalitesinde reklam üretimi</span>
+    </div>
+  </footer>
 
   <!-- Settings modal -->
   <dialog id="settingsDialog">
@@ -196,7 +379,7 @@
       <label>OpenRouter
         <input type="password" name="openrouter" placeholder="sk-or-v1-…" autocomplete="off" />
       </label>
-      <label>ElevenLabs (Modül 3)
+      <label>ElevenLabs (opsiyonel)
         <input type="password" name="elevenlabs" placeholder="xi-…" autocomplete="off" />
       </label>
       <div id="savedKeys" class="saved-keys"></div>
@@ -215,6 +398,16 @@
     </div>
   </div>
 
-  <script src="/static/app.js"></script>
+  <script src="/static/app.js?v=twin5"></script>
+  <script>
+    /* Görsel anayasa mührü — UI katmanı; backend constitution.py tek kaynak */
+    window.__REKLAM_KURGU_CONSTITUTION__ = Object.freeze({
+      id: "reklam-kurgu-visual-constitution-v1",
+      role: "professional_ad_visual_designer",
+      mandate: "highest_quality_platform_ad_creatives_only",
+      deviation_allowed: false,
+      locked: true,
+    });
+  </script>
 </body>
 </html>

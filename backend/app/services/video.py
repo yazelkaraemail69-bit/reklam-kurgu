@@ -13,14 +13,14 @@ def render_storyboard_video(
     duration_seconds: int,
 ) -> tuple[str, str]:
     """
-    Shorts (9:16) önizleme: dikey player + kinetik caption + ses senkronu.
+    9:16 reklam önizleme: dikey player + kinetik caption + ses senkronu.
     Dönüş: (video_manifest_rel, preview_html_rel)
     """
     job_dir.mkdir(parents=True, exist_ok=True)
     scenes = script.get("scenes") or []
     manifest = {
-        "title": script.get("title") or "Shorts",
-        "format": script.get("format") or "shorts_9x16",
+        "title": script.get("title") or "Reklam",
+        "format": script.get("format") or "ads_9x16",
         "duration_seconds": duration_seconds,
         "audio": audio_filename,
         "music_mood": script.get("music_mood"),
@@ -28,7 +28,7 @@ def render_storyboard_video(
         "hook": script.get("hook"),
         "edit_notes": script.get("edit_notes"),
         "scenes": scenes,
-        "provider": "shorts-preview",
+        "provider": "ads-preview",
     }
     (job_dir / "video.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -52,7 +52,7 @@ def _esc(s: str) -> str:
 
 def _preview_html(manifest: dict[str, Any], audio_filename: str) -> str:
     scenes_json = json.dumps(manifest.get("scenes") or [], ensure_ascii=False)
-    title = _esc(manifest.get("title") or "Shorts")
+    title = _esc(manifest.get("title") or "Reklam")
     hook = _esc(manifest.get("hook") or "")
     cta = _esc(manifest.get("cta") or "")
     duration = int(manifest.get("duration_seconds") or 30)
@@ -145,15 +145,15 @@ def _preview_html(manifest: dict[str, Any], audio_filename: str) -> str:
   <div class="phone" id="phone">
     <div class="progress"><i id="bar"></i></div>
     <div class="stage" id="stage">
-      <div class="role" id="role">SHORTS</div>
+      <div class="role" id="role">REKLAM</div>
       <div class="cut-tag" id="cut">—</div>
       <div class="caption" id="caption">{hook or title}</div>
-      <div class="visual-line" id="visual">Oynat — dikey Shorts önizleme</div>
+      <div class="visual-line" id="visual">Oynat — dikey reklam önizleme</div>
     </div>
     <button type="button" class="play-hit" id="playHit" aria-label="Oynat"><span>▶</span></button>
   </div>
   <audio id="audio" controls src="{audio_filename}"></audio>
-  <p class="meta"><strong>{title}</strong><br/>9:16 Shorts · {duration}s · CTA: {cta}</p>
+  <p class="meta"><strong>{title}</strong><br/>9:16 reklam · {duration}s · CTA: {cta}</p>
 </div>
 <script>
 const scenes = {scenes_json};

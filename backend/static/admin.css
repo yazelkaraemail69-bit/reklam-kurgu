@@ -14,11 +14,18 @@
 .stat {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: var(--radius-card);
   padding: 1rem 1.1rem;
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  box-shadow: var(--shadow);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.stat:hover {
+  transform: translateY(-2px);
+  border-color: var(--brand-light);
 }
 
 .stat-n {
@@ -26,6 +33,7 @@
   font-size: 1.6rem;
   font-weight: 800;
   letter-spacing: -0.03em;
+  color: var(--ink);
 }
 
 .stat-l {
@@ -36,14 +44,16 @@
 .admin-card {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: var(--radius-card);
   padding: 1.25rem;
+  box-shadow: var(--shadow);
 }
 
 .admin-card-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.75rem;
   margin-bottom: 1rem;
 }
 
@@ -51,10 +61,13 @@
   margin: 0;
   font-family: var(--font-display);
   font-size: 1.2rem;
+  color: var(--ink);
 }
 
 .table-wrap {
   overflow-x: auto;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
 }
 
 .admin-table {
@@ -66,17 +79,27 @@
 .admin-table th,
 .admin-table td {
   text-align: left;
-  padding: 0.65rem 0.5rem;
+  padding: 0.75rem 0.7rem;
   border-bottom: 1px solid var(--line);
   vertical-align: middle;
+  color: var(--text);
+}
+
+.admin-table tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-table tbody tr:hover td {
+  background: var(--brand-50);
 }
 
 .admin-table th {
   color: var(--muted);
   font-weight: 600;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  background: var(--brand-50);
 }
 
 .admin-actions {
@@ -89,29 +112,37 @@
 .admin-actions input {
   width: 88px;
   padding: 0.4rem 0.5rem;
+  min-height: 36px;
+}
+
+.admin-actions .ghost-btn,
+.admin-actions .primary-btn {
+  padding: 0.45rem 0.7rem;
+  min-height: 36px;
+  font-size: 0.85rem;
 }
 
 .pill {
   display: inline-block;
-  padding: 0.15rem 0.45rem;
+  padding: 0.2rem 0.5rem;
   border-radius: 6px;
   font-size: 0.75rem;
   font-weight: 600;
 }
 
 .pill-on {
-  background: rgba(61, 155, 122, 0.25);
-  color: #9fe0c6;
+  background: var(--brand-50);
+  color: var(--brand-dark);
 }
 
 .pill-off {
-  background: rgba(224, 122, 106, 0.2);
-  color: #e07a6a;
+  background: #fef2f2;
+  color: var(--danger);
 }
 
 .pill-admin {
-  background: rgba(226, 168, 74, 0.22);
-  color: var(--accent);
+  background: var(--brand-50);
+  color: var(--brand-dark);
   margin-left: 0.35rem;
 }
 
@@ -121,8 +152,25 @@
   align-items: center;
 }
 
+.gate-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  width: 100%;
+  text-align: center;
+}
+
+.admin-main .display {
+  margin-top: 0.25rem;
+}
+
 @media (max-width: 720px) {
   .stat-row {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-main {
+    padding: 1.35rem 0.9rem 3.5rem;
   }
 }

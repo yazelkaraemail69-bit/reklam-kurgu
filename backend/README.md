@@ -1,13 +1,13 @@
-# Master AI Yönetmen
+# Reklam Kurgu
 
-3 ajanlı Shorts üretim hattı + eleştiri modülü.
+3 ajanlı reklam senaryosu + short video üretim hattı.
 
 ## AI görev dağılımı
 
 | Ajan | Rol | Sağlayıcı |
 |------|-----|-----------|
-| AI1 | Viral senaryo (hook → gelişme → CTA) | OpenRouter / Claude |
-| AI2 | Her sahne için 9:16 sinematik görsel | OpenRouter image (Flux / DALL·E) |
+| AI1 | Reklam senaryosu (hook → pain → value → proof → CTA) | OpenRouter / Claude |
+| AI2 | Her sahne için 9:16 reklam görseli | OpenRouter image (Flux / DALL·E) |
 | AI3 | Görsel + ElevenLabs ses + kurgu → MP4 | FFmpeg (imageio-ffmpeg) |
 
 Her aşamada OpenRouter bağlantısı doğrulanır; rate limit / 401 net hata döner.
@@ -43,6 +43,7 @@ Admin: http://localhost:8000/admin
 
 ## Akış
 
-1. **AI1: Viral Senaryo Yaz**
-2. **AI2+AI3: Görsel Üret & Kurguya Ver** → MP4 + Eleştiri Raporu
-3. Eleştiri yaz → yalnız ilgili parça revize + yeniden kurgu
+1. **AI1: Reklam Senaryosu Yaz** (teklif + acı nokta + CTA)
+2. Hook varyantı seç + dönüşüm skorunu kontrol et
+3. **AI2+AI3: Görsel Üret & Kurguya Ver** → MP4 + Eleştiri Raporu
+4. Eleştiri yaz → yalnız ilgili parça revize + yeniden kurgu

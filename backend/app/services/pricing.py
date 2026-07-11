@@ -90,6 +90,19 @@ def copy_unlock_credit_cost() -> int:
     return 5
 
 
+def analyze_credit_cost() -> int:
+    return 10
+
+
+def copy_gen_credit_cost() -> int:
+    return 12
+
+
+def visual_credit_cost(platform_count: int = 1) -> int:
+    n = max(1, int(platform_count))
+    return max(15, n * 15)
+
+
 @dataclass
 class PricingTable:
     credit_usd: float

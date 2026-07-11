@@ -21,6 +21,9 @@ async def run_scenario_agent(
     style: str,
     audience: str | None,
     raw_input: str,
+    offer: str = "",
+    pain_point: str = "",
+    desired_action: str = "dm",
 ) -> dict[str, Any]:
     api_key = resolve_openrouter_key(db, user)
     check = await verify_openrouter(api_key)
@@ -33,5 +36,8 @@ async def run_scenario_agent(
         style=style,
         audience=audience,
         raw_input=raw_input,
+        offer=offer,
+        pain_point=pain_point,
+        desired_action=desired_action,
     )
     return {"script": script, "integration": check, "agent": "AI1_scenario"}

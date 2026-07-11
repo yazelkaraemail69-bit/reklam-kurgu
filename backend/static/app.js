@@ -16,6 +16,13 @@ const state = {
   refineCost: 35,
   pricing: null,
   lastScenario: null,
+  productAnalysis: null,
+  productImageUrl: null,
+  catalog: null,
+  analyzeCost: 10,
+  copyCost: 12,
+  visualPerPlatform: 15,
+  activeStudio: "scenario",
 };
 
 function setError(el, msg) {
@@ -74,7 +81,7 @@ async function loadHistory() {
   try {
     const rows = await api("/scenarios");
     if (!rows.length) {
-      box.innerHTML = `<p class="lede tight">Henüz kayıt yok.</p>`;
+      box.innerHTML = `<p class="lede tight">Henüz senaryo yok — ilk brief’ini yaz.</p>`;
       return;
     }
     box.innerHTML = rows
@@ -141,6 +148,7 @@ function showStudio() {
   $("#authPanel").hidden = true;
   $("#studioPanel").hidden = false;
   $("#userBar").hidden = false;
+  switchStudioPane(state.activeStudio || "scenario");
 }
 
 async function refreshMe() {
@@ -196,23 +204,23 @@ function produceCostForDuration(seconds) {
 function updateCostLabels() {
   const convertBtn = $("#convertBtn");
   if (convertBtn && !convertBtn.disabled) {
-    convertBtn.textContent = `AI1: Viral Senaryo Yaz (${state.scenarioCost} kredi)`;
+    convertBtn.textContent = `Reklam senaryosu yaz · ${state.scenarioCost} kredi`;
   }
   const discussBtn = $("#discussBtn");
   if (discussBtn && !discussBtn.disabled) {
-    discussBtn.textContent = `Gönder & uygula (${state.discussCost} kredi)`;
+    discussBtn.textContent = `Uygula · ${state.discussCost} kredi`;
   }
   const produceBtn = $("#produceBtn");
   if (produceBtn && !produceBtn.disabled) {
-    produceBtn.textContent = `AI2+AI3: Görsel Üret & Kurguya Ver (${state.produceCost} kredi)`;
+    produceBtn.textContent = `Görsel üret · ${state.produceCost} kredi`;
   }
   const refineBtn = $("#refineBtn");
   if (refineBtn && !refineBtn.disabled) {
-    refineBtn.textContent = `Revize et (${state.refineCost} kredi)`;
+    refineBtn.textContent = `Revize et · ${state.refineCost} kredi`;
   }
   const unlockBtn = $("#unlockCopyBtn");
   if (unlockBtn && !unlockBtn.hidden && !state.copyUnlocked) {
-    unlockBtn.textContent = `Kopyalamayı aç (${state.copyUnlockCost} kredi)`;
+    unlockBtn.textContent = `Kopyalamayı aç · ${state.copyUnlockCost} kredi`;
   }
 }
 
@@ -226,6 +234,7 @@ async function boot() {
     await refreshMe();
     showStudio();
     await loadPricing();
+    await loadCreativeCatalog();
     await loadHistory();
   } catch {
     state.token = "";
@@ -235,15 +244,26 @@ async function boot() {
   }
 }
 
-// Tabs
-document.querySelectorAll(".tab").forEach((btn) => {
+// Auth tabs only
+document.querySelectorAll(".auth-panel .tab").forEach((btn) => {
   btn.addEventListener("click", () => {
-    document.querySelectorAll(".tab").forEach((b) => b.classList.remove("active"));
+    document.querySelectorAll(".auth-panel .tab").forEach((b) => b.classList.remove("active"));
     btn.classList.add("active");
     const tab = btn.dataset.tab;
     $("#loginForm").hidden = tab !== "login";
     $("#registerForm").hidden = tab !== "register";
     setError($("#authError"), "");
+  });
+});
+
+document.querySelectorAll(".toggle-pass").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const input = btn.parentElement?.querySelector("input");
+    if (!input) return;
+    const show = input.type === "password";
+    input.type = show ? "text" : "password";
+    btn.textContent = show ? "Gizle" : "Göster";
+    btn.setAttribute("aria-label", show ? "Şifreyi gizle" : "Şifreyi göster");
   });
 });
 
@@ -262,6 +282,7 @@ $("#loginForm").addEventListener("submit", async (e) => {
     await refreshMe();
     showStudio();
     await loadHistory();
+    await loadCreativeCatalog();
   } catch (err) {
     setError($("#authError"), err.message);
   }
@@ -287,6 +308,7 @@ $("#registerForm").addEventListener("submit", async (e) => {
     await refreshMe();
     showStudio();
     await loadHistory();
+    await loadCreativeCatalog();
   } catch (err) {
     setError($("#authError"), err.message);
   }
@@ -350,6 +372,173 @@ $("#settingsForm").addEventListener("submit", async (e) => {
   }
 });
 
+function renderConversionScore(script) {
+  const box = $("#conversionScore");
+  const score = script.conversion_score;
+  if (!box) return;
+  if (!score || typeof score !== "object") {
+    box.hidden = true;
+    return;
+  }
+  box.hidden = false;
+  const total = Number(score.total ?? 0);
+  $("#scoreValue").textContent = String(total);
+  const ring = $("#scoreRing");
+  if (ring) {
+    ring.style.setProperty("--score", String(Math.max(0, Math.min(100, total))));
+    ring.classList.toggle("is-high", total >= 75);
+    ring.classList.toggle("is-mid", total >= 50 && total < 75);
+    ring.classList.toggle("is-low", total < 50);
+  }
+  $("#scoreBreakdown").textContent = [
+    `Hook ${score.hook_strength ?? "—"}`,
+    `Teklif ${score.offer_clarity ?? "—"}`,
+    `CTA ${score.cta_clarity ?? "—"}`,
+    score.note ? `· ${score.note}` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function renderHookVariants(script) {
+  const wrap = $("#hookVariants");
+  const list = $("#hookList");
+  const emptyHint = $("#hookEmptyHint");
+  if (!wrap || !list) return;
+  const variants = Array.isArray(script.hook_variants) ? script.hook_variants : [];
+  if (!variants.length) {
+    list.innerHTML = "";
+    if (emptyHint) emptyHint.hidden = false;
+    return;
+  }
+  if (emptyHint) emptyHint.hidden = true;
+  const selected = script.hook || (variants[0] && variants[0].text) || "";
+  list.innerHTML = variants
+    .map((v, i) => {
+      const id = escapeHtml(String(v.id || String.fromCharCode(65 + i)));
+      const text = escapeHtml(String(v.text || ""));
+      const angle = escapeHtml(String(v.angle || ""));
+      const active = String(v.text || "") === selected ? " is-active" : "";
+      return `<button type="button" class="hook-chip${active}" data-index="${i}">
+        <span class="hook-chip-id">${id}</span>
+        <span class="hook-chip-text">${text}</span>
+        ${angle ? `<span class="hook-chip-angle">${angle}</span>` : ""}
+      </button>`;
+    })
+    .join("");
+}
+
+const RESULT_STEP_HINTS = {
+  1: "Kampanyanın özeti ve skoru.",
+  2: "İlk 3 saniye için kancayı seç.",
+  3: "Seslendirme ve sahneleri oku.",
+  4: "İstersen kısa bir revize notu bırak.",
+  5: "Hazırsan senaryoyu kopyala.",
+};
+
+function switchResultStep(step) {
+  const n = Number(step) || 1;
+  document.querySelectorAll(".result-step").forEach((btn) => {
+    const s = Number(btn.dataset.rstep);
+    const active = s === n;
+    btn.classList.toggle("is-active", active);
+    btn.classList.toggle("is-done", s < n);
+    btn.setAttribute("aria-selected", active ? "true" : "false");
+  });
+  document.querySelectorAll(".result-pane").forEach((pane) => {
+    const on = Number(pane.dataset.rpane) === n;
+    pane.hidden = !on;
+    pane.classList.toggle("is-active", on);
+  });
+  const hint = $("#resultStepHint");
+  if (hint) hint.textContent = RESULT_STEP_HINTS[n] || "";
+}
+
+async function selectHookVariant(text) {
+  if (!state.scenarioId || !text) return;
+  setError($("#hookError"), "");
+  try {
+    const scenario = await api(`/scenarios/${state.scenarioId}/select-hook`, {
+      method: "POST",
+      body: { hook: text },
+    });
+    renderScenario(scenario);
+  } catch (err) {
+    setError($("#hookError"), err.message);
+  }
+}
+
+const BRIEF_PRESETS = {
+  beauty: {
+    title: "Cilt bakımı — ilk sipariş",
+    style: "ugc",
+    offer: "14 günlük cilt bakımı seti — ilk siparişte %20",
+    pain_point: "Pahalı kremler işe yaramıyor, cilt aynı kalıyor",
+    desired_action: "dm",
+    audience: "25–40 yaş, cilt bakımı arayan kadınlar",
+    raw_input: "Doğal ton, abartısız vaat. Önce/sonra yorumları var. Rakip: eczane markaları.",
+  },
+  saas: {
+    title: "Ajans otomasyonu — demo",
+    style: "pas",
+    offer: "14 gün ücretsiz demo — reklam raporu otomatik",
+    pain_point: "Raporlara saatler gidiyor, müşteri bekliyor",
+    desired_action: "lead_form",
+    audience: "Dijital ajans sahipleri ve medya planlamacıları",
+    raw_input: "B2B, net fayda. Jargon az. Kanıt: 120+ ajans. CTA form.",
+  },
+  food: {
+    title: "Restoran — bugün rezervasyon",
+    style: "offer-urgency",
+    offer: "Bugün rezervasyona tatlı ikramı",
+    pain_point: "Hafta sonu yer bulamamak, sırada beklemek",
+    desired_action: "whatsapp",
+    audience: "Şehir merkezinde yemek arayan 25–45 yaş",
+    raw_input: "İştah açıcı görseller, sıcak atmosfer. Stok/yer sınırlı vurgusu gerçekçi olsun.",
+  },
+  fitness: {
+    title: "Online fitness — 7 gün deneme",
+    style: "before-after",
+    offer: "7 gün ücretsiz deneme + antrenör planı",
+    pain_point: "Spor salonuna gitmeye zaman yok, motivasyon düşüyor",
+    desired_action: "link_click",
+    audience: "Evde spor yapmak isteyen yoğun çalışanlar",
+    raw_input: "Enerjik ama baskısız. Dönüşüm hikayesi. Link bio’da.",
+  },
+  ecommerce: {
+    title: "E-ticaret — ücretsiz kargo",
+    style: "social-proof",
+    offer: "Ücretsiz kargo + 2. üründe %15",
+    pain_point: "Kargo ücreti sepeti terk ettiriyor",
+    desired_action: "buy",
+    audience: "Online alışveriş yapan 20–40 yaş",
+    raw_input: "Sosyal kanıt: 4.8 puan / 2B+ satış. Net fiyat. Sahte aciliyet yok.",
+  },
+};
+
+function applyBriefPreset(key) {
+  const p = BRIEF_PRESETS[key];
+  if (!p) return;
+  const form = $("#scenarioForm");
+  if (!form) return;
+  if (form.title) form.title.value = p.title;
+  if (form.style) form.style.value = p.style;
+  if (form.offer) form.offer.value = p.offer;
+  if (form.pain_point) form.pain_point.value = p.pain_point;
+  if (form.desired_action) form.desired_action.value = p.desired_action;
+  if (form.audience) form.audience.value = p.audience;
+  if (form.raw_input) form.raw_input.value = p.raw_input;
+  setError($("#scenarioError"), "");
+}
+
+$("#briefPresets")?.addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-preset]");
+  if (!btn) return;
+  document.querySelectorAll("#briefPresets .preset-chip").forEach((b) => b.classList.remove("is-active"));
+  btn.classList.add("is-active");
+  applyBriefPreset(btn.getAttribute("data-preset"));
+});
+
 function renderScenario(scenario) {
   state.scenarioId = scenario.id;
   state.lastScenario = scenario;
@@ -362,7 +551,7 @@ function renderScenario(scenario) {
   $("#resultEmpty").hidden = true;
   $("#resultContent").hidden = false;
   $("#resultContent").classList.toggle("is-locked", !state.copyUnlocked);
-  $("#resultTitle").textContent = script.title || scenario.title || "Senaryo";
+  $("#resultTitle").textContent = script.title || scenario.title || "Reklam Senaryosu";
   $("#resultHook").textContent = script.hook || "";
   $("#resultMeta").textContent = `${(scenario.language || "tr").toUpperCase()} · ${scenario.duration_seconds || "—"}s · ${scenario.style || "—"}`;
   $("#resultVoice").textContent = script.voiceover_full || "";
@@ -372,18 +561,22 @@ function renderScenario(scenario) {
   setError($("#produceError"), "");
   setError($("#copyError"), "");
 
+  renderConversionScore(script);
+  renderHookVariants(script);
+  switchResultStep(1);
+
   const unlockBtn = $("#unlockCopyBtn");
   const copyBtn = $("#copyScenarioBtn");
   const hint = $("#copyHint");
   if (state.copyUnlocked) {
     unlockBtn.hidden = true;
     copyBtn.hidden = false;
-    hint.hidden = true;
+    if (hint) hint.textContent = "Hazırsan senaryoyu panoya al.";
   } else {
     unlockBtn.hidden = false;
-    unlockBtn.textContent = `Kopyalamayı aç (${state.copyUnlockCost} kredi)`;
+    unlockBtn.textContent = `Kopyalamayı aç · ${state.copyUnlockCost} kredi`;
     copyBtn.hidden = true;
-    hint.hidden = false;
+    if (hint) hint.textContent = "Kilitli önizleme — kopyalamak için bir kez aç.";
   }
 
   const badge = $("#resultBadge");
@@ -410,13 +603,14 @@ function renderScenario(scenario) {
 
   renderDiscussion(scenario.discussion || []);
   updateCostLabels();
+  switchStudioPane("scenario");
 }
 
 function renderDiscussion(messages) {
   const thread = $("#discussThread");
   if (!thread) return;
   if (!messages.length) {
-    thread.innerHTML = `<div class="discuss-bubble director"><span class="discuss-role">Yönetmen</span>Senaryo hazır olunca burada konuşuruz.</div>`;
+    thread.innerHTML = `<div class="discuss-bubble director"><span class="discuss-role">İpucu</span>Örn. “Hook daha sert olsun” veya “CTA’yı DM at yap”.</div>`;
     return;
   }
   thread.innerHTML = messages
@@ -468,9 +662,11 @@ async function copyScenarioText() {
 
 function renderJob(job, { soft = false } = {}) {
   state.jobId = job.id;
-  $("#playerSection").hidden = false;
-  $("#jobMeta").textContent = `İş #${job.id} · rev ${job.revision} · ${job.status}`;
-  $("#jobBadge").hidden = !job.is_mock;
+  const player = $("#playerSection");
+  if (!player) return;
+  player.hidden = false;
+  if ($("#jobMeta")) $("#jobMeta").textContent = `İş #${job.id} · rev ${job.revision} · ${job.status}`;
+  if ($("#jobBadge")) $("#jobBadge").hidden = !job.is_mock;
 
   const video = $("#videoPlayer");
   const frame = $("#previewFrame");
@@ -574,8 +770,8 @@ $("#scenarioForm").addEventListener("submit", async (e) => {
   setError($("#scenarioError"), "");
   const btn = $("#convertBtn");
   btn.disabled = true;
-  btn.textContent = "Çevriliyor…";
-  setWorking(true, "AI1 senaryo yazıyor…");
+  btn.textContent = "Yazılıyor…";
+  setWorking(true, "AI1 reklam senaryosu yazıyor…");
   const fd = new FormData(e.target);
   try {
     const scenario = await api("/scenarios/professionalize", {
@@ -586,6 +782,9 @@ $("#scenarioForm").addEventListener("submit", async (e) => {
         duration_seconds: Number(fd.get("duration_seconds")),
         style: fd.get("style"),
         audience: fd.get("audience") || null,
+        offer: fd.get("offer"),
+        pain_point: fd.get("pain_point"),
+        desired_action: fd.get("desired_action"),
         raw_input: fd.get("raw_input"),
       },
     });
@@ -596,9 +795,28 @@ $("#scenarioForm").addEventListener("submit", async (e) => {
     setError($("#scenarioError"), err.message);
   } finally {
     btn.disabled = false;
-    btn.textContent = `AI1: Viral Senaryo Yaz (${state.scenarioCost} kredi)`;
+    btn.textContent = `Reklam senaryosu yaz · ${state.scenarioCost} kredi`;
     setWorking(false);
   }
+});
+
+$("#hookList")?.addEventListener("click", (e) => {
+  const btn = e.target.closest(".hook-chip");
+  if (!btn || !state.lastScenario) return;
+  const idx = Number(btn.getAttribute("data-index"));
+  const variants = state.lastScenario.professional_script?.hook_variants || [];
+  const text = variants[idx]?.text;
+  if (text) selectHookVariant(text);
+});
+
+$("#resultSteps")?.addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-rstep]");
+  if (!btn) return;
+  switchResultStep(btn.dataset.rstep);
+});
+
+document.querySelectorAll(".result-next").forEach((btn) => {
+  btn.addEventListener("click", () => switchResultStep(btn.dataset.goto));
 });
 
 $("#unlockCopyBtn").addEventListener("click", () => {
@@ -636,12 +854,12 @@ $("#discussBtn").addEventListener("click", async () => {
     setError($("#discussError"), err.message);
   } finally {
     btn.disabled = false;
-    btn.textContent = `Gönder & uygula (${state.discussCost} kredi)`;
+    btn.textContent = `Uygula · ${state.discussCost} kredi`;
     setWorking(false);
   }
 });
 
-$("#produceBtn").addEventListener("click", async () => {
+$("#produceBtn")?.addEventListener("click", async () => {
   setError($("#produceError"), "");
   if (!state.scenarioId) {
     setError($("#produceError"), "Önce senaryo üretin");
@@ -657,7 +875,7 @@ $("#produceBtn").addEventListener("click", async () => {
       body: { scenario_id: state.scenarioId },
     });
     renderJob(queued, { soft: true });
-    $("#playerSection").scrollIntoView({ behavior: "smooth", block: "start" });
+    $("#playerSection")?.scrollIntoView({ behavior: "smooth", block: "start" });
     const job = await pollJob(queued.id, { label: "AI2 görsel + AI3 kurgu" });
     renderJob(job);
     await refreshMe();
@@ -665,18 +883,18 @@ $("#produceBtn").addEventListener("click", async () => {
     setError($("#produceError"), err.message);
   } finally {
     btn.disabled = false;
-    btn.textContent = `AI2+AI3: Görsel Üret & Kurguya Ver (${state.produceCost} kredi)`;
+    btn.textContent = `Görsel üret · ${state.produceCost} kredi`;
     setWorking(false);
   }
 });
 
-$("#refineBtn").addEventListener("click", async () => {
+$("#refineBtn")?.addEventListener("click", async () => {
   setError($("#refineError"), "");
   if (!state.jobId) {
     setError($("#refineError"), "Önce video üretin");
     return;
   }
-  const instruction = ($("#refineInput").value || "").trim();
+  const instruction = ($("#refineInput")?.value || "").trim();
   if (instruction.length < 3) {
     setError($("#refineError"), "En az 3 karakter yazın");
     return;
@@ -690,17 +908,399 @@ $("#refineBtn").addEventListener("click", async () => {
       method: "POST",
       body: { instruction },
     });
-    $("#refineInput").value = "";
+    if ($("#refineInput")) $("#refineInput").value = "";
     renderJob(job);
     await refreshMe();
   } catch (err) {
     setError($("#refineError"), err.message);
   } finally {
     btn.disabled = false;
-    btn.textContent = `Revize et (${state.refineCost} kredi)`;
+    btn.textContent = `Revize et · ${state.refineCost} kredi`;
     setWorking(false);
   }
 });
+
+/* --- Creative: ürün / metin / platform görsel --- */
+
+const STUDIO_COPY = {
+  scenario: {
+    title: "Senaryo",
+    lede: "Brief’i doldur, reklam senaryosunu üret.",
+  },
+  product: {
+    title: "Ürün & Metin",
+    lede: "Ürün görselini analiz et, satış metinlerini üret.",
+  },
+  visuals: {
+    title: "Platform Görselleri",
+    lede: "Platform seç, ajans kalitesinde reklam görseli üret.",
+  },
+};
+
+function switchStudioPane(name) {
+  const mod = STUDIO_COPY[name] ? name : "scenario";
+  state.activeStudio = mod;
+
+  document.querySelectorAll("#studioTabs .tab").forEach((b) => {
+    b.classList.toggle("active", b.dataset.studio === mod);
+  });
+
+  document.querySelectorAll(".studio-pane").forEach((pane) => {
+    const on = pane.dataset.pane === mod;
+    pane.hidden = !on;
+    pane.style.display = on ? "" : "none";
+    if (on) {
+      pane.classList.remove("pane-enter");
+      void pane.offsetWidth;
+      pane.classList.add("pane-enter");
+    }
+  });
+
+  const title = $("#studioTitle");
+  const lede = $("#studioLede");
+  if (title) title.textContent = STUDIO_COPY[mod].title;
+  if (lede) lede.textContent = STUDIO_COPY[mod].lede;
+
+  document.querySelectorAll(".module-result").forEach((el) => {
+    const on = el.dataset.moduleResult === mod;
+    el.hidden = !on;
+    el.style.display = on ? "" : "none";
+  });
+
+  const history = $("#historyBlock");
+  if (history) {
+    const on = mod === "scenario";
+    history.hidden = !on;
+    history.style.display = on ? "" : "none";
+  }
+}
+
+$("#studioTabs")?.addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-studio]");
+  if (!btn) return;
+  switchStudioPane(btn.dataset.studio);
+});
+
+async function loadCreativeCatalog() {
+  try {
+    const cat = await api("/creative/catalog");
+    state.catalog = cat;
+    state.analyzeCost = cat.costs?.analyze || 10;
+    state.copyCost = cat.costs?.copy || 12;
+    state.visualPerPlatform = cat.costs?.visual_per_platform || 15;
+    renderCopyTypeGrid(cat.copy_types || []);
+    renderPlatformGrid(cat.platforms || []);
+    updateCreativeLabels();
+  } catch {
+    /* katalog opsiyonel boot */
+  }
+}
+
+function renderCopyTypeGrid(types) {
+  const grid = $("#copyTypeGrid");
+  if (!grid) return;
+  const legend = grid.querySelector("legend");
+  grid.innerHTML = "";
+  if (legend) grid.appendChild(legend);
+  else {
+    const l = document.createElement("legend");
+    l.textContent = "Üretilecek metinler";
+    grid.appendChild(l);
+  }
+  types.forEach((t, i) => {
+    const id = `copy-type-${t.id}`;
+    const label = document.createElement("label");
+    label.className = "check-item";
+    label.innerHTML = `<input type="checkbox" name="copy_type" value="${escapeHtml(t.id)}" ${i < 3 ? "checked" : ""} /> <span><strong>${escapeHtml(t.label)}</strong><small>${escapeHtml(t.hint || "")}</small></span>`;
+    grid.appendChild(label);
+  });
+}
+
+function renderPlatformGrid(platforms) {
+  const grid = $("#platformGrid");
+  if (!grid) return;
+  const legend = grid.querySelector("legend");
+  grid.innerHTML = "";
+  if (legend) grid.appendChild(legend);
+  else {
+    const l = document.createElement("legend");
+    l.textContent = "Platformlar";
+    grid.appendChild(l);
+  }
+  platforms.forEach((p, i) => {
+    const label = document.createElement("label");
+    label.className = "check-item";
+    label.innerHTML = `<input type="checkbox" name="platform" value="${escapeHtml(p.id)}" ${i < 2 ? "checked" : ""} /> <span><strong>${escapeHtml(p.label)}</strong><small>${escapeHtml(p.ratio)} · ${p.width}×${p.height}</small></span>`;
+    grid.appendChild(label);
+  });
+}
+
+function updateCreativeLabels() {
+  const a = $("#analyzeBtn");
+  if (a && !a.disabled) a.textContent = `Ürünü analiz et · ${state.analyzeCost} kredi`;
+  const c = $("#copyGenBtn");
+  if (c) {
+    c.textContent = `Metinleri üret · ${state.copyCost} kredi`;
+    c.disabled = !state.productAnalysis;
+  }
+  const v = $("#visualGenBtn");
+  if (v) {
+    const n = document.querySelectorAll('#platformGrid input[name="platform"]:checked').length || 1;
+    const hasFile = Boolean($("#visualImage")?.files?.[0] || $("#productImage")?.files?.[0]);
+    const ready = Boolean(state.productAnalysis || hasFile);
+    v.textContent = `Platform görselleri üret · ${state.visualPerPlatform * n} kredi`;
+    v.disabled = !ready;
+  }
+}
+
+function previewImage(file, boxSel, imgSel) {
+  const box = $(boxSel);
+  const img = $(imgSel);
+  if (!file || !box || !img) return;
+  img.src = URL.createObjectURL(file);
+  box.hidden = false;
+  box.style.display = "";
+}
+
+async function analyzeProductFile(file, { language = "tr", extra = "" } = {}) {
+  const fd = new FormData();
+  fd.append("file", file);
+  fd.append("language", language);
+  fd.append("extra_context", extra);
+  const res = await fetch(`${API}/creative/analyze-product`, {
+    method: "POST",
+    headers: state.token ? { Authorization: `Bearer ${state.token}` } : {},
+    body: fd,
+  });
+  const text = await res.text();
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = { detail: text };
+  }
+  if (!res.ok) {
+    throw new Error(typeof data?.detail === "string" ? data.detail : JSON.stringify(data?.detail || data));
+  }
+  state.productAnalysis = data.analysis;
+  state.productImageUrl = data.image_url;
+  return data;
+}
+
+$("#productImage")?.addEventListener("change", () => {
+  const file = $("#productImage").files?.[0];
+  previewImage(file, "#productPreview", "#productPreviewImg");
+  updateCreativeLabels();
+});
+
+$("#visualImage")?.addEventListener("change", () => {
+  const file = $("#visualImage").files?.[0];
+  previewImage(file, "#visualPreview", "#visualPreviewImg");
+  setError($("#visualGenError"), "");
+  updateCreativeLabels();
+});
+
+$("#analyzeBtn")?.addEventListener("click", async () => {
+  setError($("#analyzeError"), "");
+  const file = $("#productImage")?.files?.[0];
+  if (!file) {
+    setError($("#analyzeError"), "Ürün görseli seçin");
+    return;
+  }
+  const btn = $("#analyzeBtn");
+  btn.disabled = true;
+  setWorking(true, "Ürün görseli analiz ediliyor…");
+  try {
+    const data = await analyzeProductFile(file, {
+      language: $("#productLanguage")?.value || "tr",
+      extra: $("#productContext")?.value || "",
+    });
+    const empty = $("#productResultEmpty");
+    const body = $("#productResultBody");
+    if (empty) empty.hidden = true;
+    if (body) {
+      body.hidden = false;
+      body.style.display = "";
+    }
+    const box = $("#analysisBox");
+    const pre = $("#analysisJson");
+    if (box && pre) {
+      box.hidden = false;
+      box.style.display = "";
+      pre.textContent = JSON.stringify(data.analysis, null, 2);
+    }
+    if (data.analysis?.product_name && !$("#productOffer")?.value) {
+      $("#productOffer").value = data.analysis.product_name;
+    }
+    if (data.analysis?.product_name && !$("#visualOffer")?.value) {
+      $("#visualOffer").value = data.analysis.product_name;
+    }
+    switchStudioPane("product");
+    updateCreativeLabels();
+    await refreshMe();
+  } catch (err) {
+    setError($("#analyzeError"), err.message);
+  } finally {
+    btn.disabled = false;
+    updateCreativeLabels();
+    setWorking(false);
+  }
+});
+
+$("#copyGenBtn")?.addEventListener("click", async () => {
+  setError($("#copyGenError"), "");
+  if (!state.productAnalysis) {
+    setError($("#copyGenError"), "Önce ürünü analiz edin");
+    return;
+  }
+  const types = [...document.querySelectorAll('#copyTypeGrid input[name="copy_type"]:checked')].map((el) => el.value);
+  if (!types.length) {
+    setError($("#copyGenError"), "En az bir metin türü seçin");
+    return;
+  }
+  const btn = $("#copyGenBtn");
+  btn.disabled = true;
+  setWorking(true, "Pazarlama metinleri yazılıyor…");
+  try {
+    const data = await api("/creative/generate-copy", {
+      method: "POST",
+      body: {
+        analysis: state.productAnalysis,
+        copy_types: types,
+        language: $("#productLanguage")?.value || "tr",
+        offer: $("#productOffer")?.value || "",
+        pain_point: $("#productPain")?.value || "",
+        desired_action: $("#productAction")?.value || "dm",
+        extra_brief: $("#productContext")?.value || "",
+      },
+    });
+    renderCopies(data.copies || {});
+    await refreshMe();
+  } catch (err) {
+    setError($("#copyGenError"), err.message);
+  } finally {
+    updateCreativeLabels();
+    setWorking(false);
+  }
+});
+
+function renderCopies(copies) {
+  const out = $("#copiesOut");
+  if (!out) return;
+  const empty = $("#productResultEmpty");
+  const body = $("#productResultBody");
+  if (empty) empty.hidden = true;
+  if (body) body.hidden = false;
+  const entries = Object.entries(copies);
+  if (!entries.length) {
+    out.innerHTML = `<p class="lede tight">Metin henüz yok — türleri seçip üret.</p>`;
+    return;
+  }
+  out.innerHTML = entries
+    .map(([key, val]) => {
+      const title = escapeHtml(val.title || key);
+      const bodyText = escapeHtml(val.body || "");
+      const cta = escapeHtml(val.cta || "");
+      const tags = (val.hashtags || []).map((t) => escapeHtml(t)).join(" ");
+      const notes = escapeHtml(val.notes || "");
+      return `<article class="copy-card">
+        <header><strong>${title}</strong><span class="badge">${escapeHtml(key)}</span></header>
+        <p class="copy-body">${bodyText}</p>
+        ${cta ? `<p><strong>CTA:</strong> ${cta}</p>` : ""}
+        ${tags ? `<p class="copy-tags">${tags}</p>` : ""}
+        ${notes ? `<p class="lede tight">${notes}</p>` : ""}
+        <button type="button" class="ghost-btn copy-one" data-copy="${escapeHtml(val.body || "")}">Kopyala</button>
+      </article>`;
+    })
+    .join("");
+  switchStudioPane("product");
+}
+
+$("#copiesOut")?.addEventListener("click", async (e) => {
+  const btn = e.target.closest(".copy-one");
+  if (!btn) return;
+  try {
+    await navigator.clipboard.writeText(btn.getAttribute("data-copy") || "");
+    btn.textContent = "Kopyalandı ✓";
+    btn.classList.add("is-copied");
+    setTimeout(() => {
+      btn.textContent = "Kopyala";
+      btn.classList.remove("is-copied");
+    }, 1400);
+  } catch {
+    /* ignore */
+  }
+});
+
+$("#platformGrid")?.addEventListener("change", () => updateCreativeLabels());
+
+$("#visualGenBtn")?.addEventListener("click", async () => {
+  setError($("#visualGenError"), "");
+  const file = $("#visualImage")?.files?.[0] || $("#productImage")?.files?.[0];
+  if (!state.productAnalysis && !file) {
+    setError($("#visualGenError"), "Önce bir ürün görseli seçin");
+    return;
+  }
+  const platforms = [...document.querySelectorAll('#platformGrid input[name="platform"]:checked')].map((el) => el.value);
+  if (!platforms.length) {
+    setError($("#visualGenError"), "En az bir platform seçin");
+    return;
+  }
+  const btn = $("#visualGenBtn");
+  btn.disabled = true;
+  setWorking(true, "Platform görselleri üretiliyor…");
+  try {
+    if (!state.productAnalysis) {
+      setWorking(true, "Görsel analiz ediliyor…");
+      await analyzeProductFile(file, {
+        language: $("#productLanguage")?.value || "tr",
+        extra: $("#visualOffer")?.value || "",
+      });
+      await refreshMe();
+    }
+    setWorking(true, "Platform görselleri üretiliyor…");
+    const data = await api("/creative/generate-visuals", {
+      method: "POST",
+      body: {
+        analysis: state.productAnalysis,
+        platforms,
+        language: $("#productLanguage")?.value || "tr",
+        offer: $("#visualOffer")?.value || $("#productOffer")?.value || "",
+        style: $("#visualStyle")?.value || "pas",
+      },
+    });
+    renderVisuals(data.visuals || []);
+    await refreshMe();
+  } catch (err) {
+    setError($("#visualGenError"), err.message);
+  } finally {
+    updateCreativeLabels();
+    setWorking(false);
+  }
+});
+
+function renderVisuals(items) {
+  const out = $("#visualsOut");
+  if (!out) return;
+  const empty = $("#visualResultEmpty");
+  if (empty) empty.hidden = items.length > 0;
+  out.hidden = false;
+  if (!items.length) {
+    out.innerHTML = `<p class="lede tight">Görsel henüz yok — platform seçip üret.</p>`;
+    return;
+  }
+  out.innerHTML = items
+    .map((v) => {
+      const url = mediaUrl(v.url);
+      return `<figure class="visual-card">
+        <img src="${escapeHtml(url)}" alt="${escapeHtml(v.label || v.platform)}" />
+        <figcaption><strong>${escapeHtml(v.label || v.platform)}</strong><span>${escapeHtml(v.ratio || "")} · ${v.width}×${v.height}</span>
+        <a class="ghost-btn" href="${escapeHtml(url)}" download target="_blank" rel="noopener">İndir</a></figcaption>
+      </figure>`;
+    })
+    .join("");
+  switchStudioPane("visuals");
+}
 
 const durationInput = $("#scenarioForm")?.querySelector('[name="duration_seconds"]');
 if (durationInput) {

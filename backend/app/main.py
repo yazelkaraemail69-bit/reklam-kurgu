@@ -6,9 +6,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.constitution import CONSTITUTION_ID, VISUAL_CONSTITUTION, assert_ad_creative_intent
 from app.config import get_settings
 from app.database import init_db
-from app.routers import admin, api_keys, auth, credits, jobs, media, scenarios
+from app.routers import admin, api_keys, auth, creative, credits, jobs, media, scenarios
 
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 MEDIA_DIR = Path(__file__).resolve().parent.parent / "data" / "media"
@@ -31,7 +32,8 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.app_name,
         description=(
-            "Master AI Yönetmen — AI1 Senaryo, AI2 Görsel, AI3 Kurgu + Eleştiri."
+            "Reklam Kurgu — profesyonel görsel tasarımcı anayasası: "
+            "tüm platformlar için en kaliteli reklam görselleri. Sapma yok."
         ),
         version="1.0.0",
         lifespan=lifespan,
@@ -41,6 +43,14 @@ def create_app() -> FastAPI:
         allow_origins=[
             "http://127.0.0.1:8000",
             "http://localhost:8000",
+            "http://127.0.0.1:8020",
+            "http://localhost:8020",
+            "http://127.0.0.1:8022",
+            "http://localhost:8022",
+            "http://127.0.0.1:8023",
+            "http://localhost:8023",
+            "http://127.0.0.1:8024",
+            "http://localhost:8024",
             "http://127.0.0.1:8010",
             "http://127.0.0.1:8011",
             "http://127.0.0.1:8012",
@@ -56,6 +66,7 @@ def create_app() -> FastAPI:
     app.include_router(api_keys.router, prefix="/api")
     app.include_router(credits.router, prefix="/api")
     app.include_router(scenarios.router, prefix="/api")
+    app.include_router(creative.router, prefix="/api")
     app.include_router(jobs.router, prefix="/api")
     app.include_router(admin.router, prefix="/api")
     app.include_router(media.router)
@@ -64,21 +75,49 @@ def create_app() -> FastAPI:
     def health():
         return {
             "status": "ok",
-            "product": "master_ai_director",
-            "agents": ["AI1_scenario", "AI2_visual", "AI3_editor", "critique"],
+            "product": "reklam_kurgu",
+            "constitution_id": CONSTITUTION_ID,
+            "constitution_locked": True,
+            "role": "professional_ad_visual_designer",
+            "mandate": "highest_quality_platform_ad_creatives_only",
+            "deviation_allowed": False,
+            "agents": ["AI1_scenario", "product_vision", "copywriter", "platform_visuals"],
             "mock_ai": settings.mock_ai,
         }
+
+    @app.get("/api/constitution")
+    def constitution():
+        return assert_ad_creative_intent(
+            {
+                "id": CONSTITUTION_ID,
+                "text": VISUAL_CONSTITUTION,
+                "locked": True,
+                "applies_to": [
+                    "platform_visuals",
+                    "product_vision",
+                    "copywriter",
+                    "scenario",
+                    "scene_stills",
+                ],
+            }
+        )
 
     if STATIC_DIR.is_dir():
         app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
         @app.get("/")
         def studio():
-            return FileResponse(STATIC_DIR / "index.html")
+            return FileResponse(
+                STATIC_DIR / "index.html",
+                headers={"Cache-Control": "no-store, max-age=0"},
+            )
 
         @app.get("/admin")
         def admin_panel():
-            return FileResponse(STATIC_DIR / "admin.html")
+            return FileResponse(
+                STATIC_DIR / "admin.html",
+                headers={"Cache-Control": "no-store, max-age=0"},
+            )
 
     return app
 

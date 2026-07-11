@@ -22,21 +22,34 @@ def build_critique_report(script: dict[str, Any], *, is_mock: bool = False) -> d
     suggestions: list[str] = []
 
     if script.get("hook"):
-        strengths.append("Hook tanımlı — ilk 3 sn için net bir giriş var.")
+        strengths.append("Hook tanımlı — ilk 3 sn scroll’u kesmeye hazır.")
     else:
-        risks.append("Hook zayıf veya eksik.")
+        risks.append("Hook zayıf veya eksik — reklamda ilk 3 sn kritik.")
 
     if script.get("cta"):
         strengths.append(f"CTA mevcut: “{script.get('cta')}”.")
     else:
-        risks.append("CTA yok — kapanış eylemi eklenmeli.")
+        risks.append("CTA yok — tıklama/satış eylemi eklenmeli.")
+
+    score = script.get("conversion_score") or {}
+    if isinstance(score, dict) and score.get("total") is not None:
+        total = int(score.get("total") or 0)
+        if total >= 75:
+            strengths.append(f"Dönüşüm skoru {total}/100 — yayına yakın.")
+        elif total >= 50:
+            suggestions.append(f"Dönüşüm skoru {total}/100 — hook veya CTA güçlendir.")
+        else:
+            risks.append(f"Dönüşüm skoru düşük ({total}/100).")
+
+    if script.get("hook_variants"):
+        strengths.append("3 hook varyantı var — A/B testi için hazır.")
 
     if len(scenes) < 4:
-        risks.append("Sahne sayısı Shorts için az; ritim zayıf kalabilir.")
+        risks.append("Sahne sayısı reklam için az; ritim zayıf kalabilir.")
     elif len(scenes) > 7:
         risks.append("Sahne sayısı yüksek; tempo yavaşlayabilir.")
     else:
-        strengths.append(f"{len(scenes)} sahne — Shorts ritmine uygun aralık.")
+        strengths.append(f"{len(scenes)} sahne — kısa form reklam ritmine uygun.")
 
     narrations = [str(s.get("narration") or "") for s in scenes]
     if len(narrations) >= 2 and len(set(narrations)) < len(narrations):
@@ -67,8 +80,8 @@ def build_critique_report(script: dict[str, Any], *, is_mock: bool = False) -> d
         "scene_count": len(scenes),
         "mock": is_mock,
         "how_to_reply": (
-            "Örn: ‘Sahne 2 çok yavaş’, ‘Hook daha çarpıcı olsun’, "
-            "‘Sahne 3 görselini daha sinematik yap’"
+            "Örn: ‘Hook daha sert olsun’, ‘Acı noktasını güçlendir’, "
+            "‘CTA’yı DM at yap’, ‘Sahne 3 görselini UGC yap’"
         ),
     }
 
@@ -92,6 +105,9 @@ def parse_feedback_targets(instruction: str, script: dict[str, Any]) -> dict[str
             "tempo",
             "hook",
             "cta",
+            "acı",
+            "pain",
+            "teklif",
             "metin",
             "anlat",
             "senaryo",

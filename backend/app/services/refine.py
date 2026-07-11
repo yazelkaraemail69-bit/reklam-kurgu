@@ -14,10 +14,12 @@ from app.models import User
 from app.services.director.integration import resolve_openrouter_key
 
 REFINE_SYSTEM = """
-SEN: YouTube Shorts uzmanı + profesyonel video editörüsün.
+SEN: Performance reklam stratejisti + 9:16 reklam videosu editörüsün.
 Mevcut senaryoyu ve kullanıcının düzeltmesini alacaksın.
 SADECE ilgili alanları değiştir; geri kalanını koru.
-Brief/tekrar yapıştırma YASAK. Shorts ritmini (hook→problem→twist→demo→cta) bozma.
+hook_variants, conversion_score ve brief alanlarını SİLME / boşaltma.
+Brief/tekrar yapıştırma YASAK. Reklam ritmini (hook→pain→value→proof→cta) bozma.
+CTA tek net eylem olsun (DM / link / satın al / form / WhatsApp).
 
 Yanıt SADECE JSON:
 {
@@ -52,9 +54,21 @@ def _mock_refine(script: dict[str, Any], instruction: str) -> dict[str, Any]:
         changed.append("cta")
 
     # Hook
-    if any(k in lower for k in ("hook", "açılış", "giriş", "ilk saniye")):
+    if any(k in lower for k in ("hook", "açılış", "giriş", "ilk saniye", "kanca")):
         updated["hook"] = instruction.strip()[:200]
         changed.append("hook")
+        scenes = updated.get("scenes") or []
+        if scenes and str(scenes[0].get("role") or "").lower() == "hook":
+            scenes[0]["narration"] = updated["hook"]
+            changed.append("scenes[1].narration")
+
+    # Acı / teklif dili
+    if any(k in lower for k in ("acı", "pain", "problem")) and updated.get("scenes"):
+        for scene in updated["scenes"]:
+            if str(scene.get("role") or "").lower() in ("pain", "problem"):
+                scene["narration"] = instruction.strip()[:400]
+                changed.append(f"scenes[{scene.get('index')}].narration")
+                break
 
     # Müzik
     if any(k in lower for k in ("müzik", "music", "atmosfer")):
@@ -176,6 +190,13 @@ async def refine_script(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Düzenleme şeması geçersiz",
         )
+    # Reklam meta alanlarını koru (model düşürürse)
+    merged = data["script"]
+    if isinstance(merged, dict):
+        for key in ("hook_variants", "conversion_score", "brief", "format"):
+            if key not in merged and script.get(key) is not None:
+                merged[key] = script[key]
+        data["script"] = merged
     data.setdefault("changed_fields", [])
     data.setdefault("summary", "")
     return data

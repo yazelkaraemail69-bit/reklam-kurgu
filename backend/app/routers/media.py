@@ -52,3 +52,45 @@ def get_job_media(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dosya yok")
 
     return FileResponse(target)
+
+
+def _media_base() -> Path:
+    root = Path(get_settings().media_dir)
+    if not root.is_absolute():
+        root = Path(__file__).resolve().parent.parent.parent / root
+    return root.resolve()
+
+
+@router.get("/media/uploads/{user_id}/{file_path:path}")
+def get_upload_media(
+    user_id: int,
+    file_path: str,
+    access_token: str = Query(..., min_length=10),
+    db: Session = Depends(get_db),
+):
+    user = _user_from_access_token(access_token, db)
+    if user.id != user_id and not is_admin(user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Erişim yok")
+    root = (_media_base() / "uploads" / str(user_id)).resolve()
+    target = (root / file_path).resolve()
+    if not str(target).startswith(str(root)) or not target.is_file():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dosya yok")
+    return FileResponse(target)
+
+
+@router.get("/media/creative/{user_id}/{job_id}/{file_path:path}")
+def get_creative_media(
+    user_id: int,
+    job_id: str,
+    file_path: str,
+    access_token: str = Query(..., min_length=10),
+    db: Session = Depends(get_db),
+):
+    user = _user_from_access_token(access_token, db)
+    if user.id != user_id and not is_admin(user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Erişim yok")
+    root = (_media_base() / "creative" / str(user_id) / job_id).resolve()
+    target = (root / file_path).resolve()
+    if not str(target).startswith(str(root)) or not target.is_file():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dosya yok")
+    return FileResponse(target)

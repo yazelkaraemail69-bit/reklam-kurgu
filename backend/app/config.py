@@ -10,7 +10,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    app_name: str = "Master AI Yönetmen"
+    app_name: str = "Reklam Kurgu"
     debug: bool = True
 
     database_url: str = "sqlite:///./data/app.db"
@@ -31,6 +31,7 @@ class Settings(BaseSettings):
 
     # --- AI 2: Görsel (OpenRouter image / DALL·E / Flux) ---
     openrouter_image_model: str = "black-forest-labs/flux.2-pro"
+    openrouter_vision_model: str = "anthropic/claude-sonnet-4"
     image_width: int = 768
     image_height: int = 1344  # ~9:16
 
@@ -54,7 +55,8 @@ class Settings(BaseSettings):
     copy_unlock_credit_cost: int = 5
 
     media_dir: str = "./data/media"
-    admin_email: str = ""
+    # Senin hesabın: admin + sınırsız kredi (env ile override edilebilir)
+    admin_email: str = "yazelkaraemail69@gmail.com"
 
 
 @lru_cache

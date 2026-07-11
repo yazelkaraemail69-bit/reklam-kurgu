@@ -1,14 +1,22 @@
-﻿# Shorts Video Oluşturucu
+﻿# Reklam Kurgu
 
-Master AI Yönetmen ile YouTube Shorts / Reels üretim hattı.
+İşletmeler için AI reklam senaryosu, ürün metni ve sosyal medya görselleri.
 
 ## Ne yapar?
 
-1. **AI1 — Senaryo** (OpenRouter / Claude): viral hook → gelişme → CTA  
-2. **AI2 — Görsel** (OpenRouter image / Flux): her sahne için 9:16 kare  
-3. **AI3 — Kurgu** (FFmpeg): görsel + ElevenLabs ses → MP4  
-4. **Tartışma paneli**: senaryoyu eleştir, yalnız ilgili kısmı revize et  
-5. **Kopya kilidi**: senaryoyu kopyalamak için kredi (admin muaf)
+1. **Senaryo** — Shorts/Reels: Hook → Pain → Value → Proof → CTA + hook A/B + dönüşüm skoru  
+2. **Ürün analizi** — ürün görselini yükle, AI görseli analiz eder  
+3. **Pazarlama metinleri** — tanıtım, Instagram, Facebook, LinkedIn, WhatsApp, fayda listesi, landing  
+4. **Platform görselleri** — Instagram, TikTok/Shorts, Facebook, LinkedIn, Pinterest ölçüleri  
+
+Video üretimi geri planda; odak senaryo + metin + pazarlama görseli.
+
+## Reklam brief alanları
+
+- Ürün / teklif  
+- Müşteri acı noktası  
+- Hedef aksiyon (DM, link, satın al, form, WhatsApp)  
+- Format (PAS, UGC, önce/sonra, teklif+aciliyet, sosyal kanıt)  
 
 ## Hızlı başlangıç
 

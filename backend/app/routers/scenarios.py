@@ -16,6 +16,7 @@ from app.schemas import (
     ScenarioDiscussRequest,
     ScenarioOut,
     ScenarioProfessionalizeRequest,
+    ScenarioSelectHookRequest,
 )
 from app.services.credits import apply_credit_change
 from app.services.director.ai1_scenario import run_scenario_agent
@@ -28,6 +29,26 @@ from app.services.pricing import (
 )
 
 router = APIRouter(prefix="/scenarios", tags=["scenarios"])
+
+
+def _compose_stored_brief(
+    *,
+    offer: str,
+    pain_point: str,
+    desired_action: str,
+    style: str,
+    raw_input: str,
+) -> str:
+    """Geçmişte okunabilir reklam brief’i sakla."""
+    return "\n".join(
+        [
+            f"Teklif: {offer}",
+            f"Acı nokta: {pain_point}",
+            f"Hedef aksiyon: {desired_action}",
+            f"Format: {style}",
+            f"Detay: {raw_input}",
+        ]
+    )
 
 
 def _parse_script(raw: str) -> dict:
@@ -83,16 +104,42 @@ def _critique_to_message(critique: dict) -> str:
 
 def _format_copy_text(script: dict, scenario: Scenario) -> str:
     lines = [
-        f"# {script.get('title') or scenario.title or 'Senaryo'}",
-        f"Dil: {scenario.language} | Süre: {scenario.duration_seconds}s | Üslup: {scenario.style}",
+        f"# {script.get('title') or scenario.title or 'Reklam Senaryosu'}",
+        f"Dil: {scenario.language} | Süre: {scenario.duration_seconds}s | Format: {scenario.style}",
         "",
         f"HOOK: {script.get('hook') or ''}",
         "",
-        "SESLENDİRME:",
-        script.get("voiceover_full") or "",
-        "",
-        "SAHNELER:",
     ]
+    variants = script.get("hook_variants") or []
+    if variants:
+        lines.append("HOOK VARYANTLARI:")
+        for v in variants:
+            if isinstance(v, dict):
+                lines.append(
+                    f"- {v.get('id') or '?'} [{v.get('angle') or ''}]: {v.get('text') or ''}"
+                )
+            else:
+                lines.append(f"- {v}")
+        lines.append("")
+    score = script.get("conversion_score") or {}
+    if isinstance(score, dict) and score:
+        lines.append(
+            f"DÖNÜŞÜM SKORU: {score.get('total', '—')}/100 "
+            f"(hook {score.get('hook_strength', '—')} · "
+            f"teklif {score.get('offer_clarity', '—')} · "
+            f"CTA {score.get('cta_clarity', '—')})"
+        )
+        if score.get("note"):
+            lines.append(f"Not: {score.get('note')}")
+        lines.append("")
+    lines.extend(
+        [
+            "SESLENDİRME:",
+            script.get("voiceover_full") or "",
+            "",
+            "SAHNELER:",
+        ]
+    )
     for scene in script.get("scenes") or []:
         lines.append(
             f"- [{scene.get('timecode') or ''}] "
@@ -198,6 +245,9 @@ async def professionalize(
             style=payload.style,
             audience=payload.audience,
             raw_input=payload.raw_input.strip(),
+            offer=payload.offer.strip(),
+            pain_point=payload.pain_point.strip(),
+            desired_action=payload.desired_action.strip(),
         )
     except Exception as exc:  # noqa: BLE001
         apply_credit_change(
@@ -236,6 +286,13 @@ async def professionalize(
     ]
 
     title = payload.title or store.get("title") or None
+    stored_brief = _compose_stored_brief(
+        offer=payload.offer.strip(),
+        pain_point=payload.pain_point.strip(),
+        desired_action=payload.desired_action.strip(),
+        style=payload.style,
+        raw_input=payload.raw_input.strip(),
+    )
     row = Scenario(
         user_id=user.id,
         language=payload.language,
@@ -243,13 +300,39 @@ async def professionalize(
         duration_seconds=payload.duration_seconds,
         style=payload.style,
         audience=payload.audience,
-        raw_input=payload.raw_input.strip(),
+        raw_input=stored_brief,
         professional_script=json.dumps(store, ensure_ascii=False),
         status="ready",
         copy_unlocked=has_unlimited_credits(user),
         discussion_log=json.dumps(discussion, ensure_ascii=False),
     )
     db.add(row)
+    db.commit()
+    db.refresh(row)
+    return _to_out(row, user)
+
+
+@router.post("/{scenario_id}/select-hook", response_model=ScenarioOut)
+def select_hook(
+    scenario_id: int,
+    payload: ScenarioSelectHookRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ScenarioOut:
+    """A/B hook seçimi — kredi yok, senaryoyu üretime kilitle."""
+    row = db.get(Scenario, scenario_id)
+    if row is None or row.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Senaryo bulunamadı")
+
+    script = _parse_script(row.professional_script)
+    hook = payload.hook.strip()
+    script["hook"] = hook
+    scenes = script.get("scenes") or []
+    if scenes and str(scenes[0].get("role") or "").lower() == "hook":
+        scenes[0]["narration"] = hook
+        script["scenes"] = scenes
+    row.professional_script = json.dumps(script, ensure_ascii=False)
+    row.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(row)
     return _to_out(row, user)
@@ -300,6 +383,10 @@ async def discuss_scenario(
         ) from exc
 
     after = feedback["script"]
+    if isinstance(after, dict):
+        for key in ("hook_variants", "conversion_score", "brief", "format"):
+            if key not in after and before.get(key) is not None:
+                after[key] = before[key]
     changed = feedback.get("changed_fields") or []
     summary = feedback.get("summary") or "Senaryo güncellendi."
 

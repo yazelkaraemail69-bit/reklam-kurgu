@@ -35,41 +35,51 @@ def _extract_json(text: str) -> dict[str, Any]:
     return json.loads(text)
 
 
+def _topic_seed(raw_input: str) -> str:
+    """Brief'ten kısa konu çekirdeği — tekrar için değil, bağlam için."""
+    cleaned = re.sub(r"\s+", " ", raw_input.strip())
+    return cleaned[:90]
+
+
 def _scene_plan(duration_seconds: int) -> list[tuple[str, int]]:
-    """(role, süre_sn) — Shorts ritmi."""
+    """(role, süre_sn) — reklam ritmi."""
     if duration_seconds <= 15:
-        return [("hook", 3), ("problem", 4), ("twist", 4), ("cta", 4)]
+        return [("hook", 3), ("pain", 4), ("value", 4), ("cta", 4)]
     if duration_seconds <= 30:
         return [
             ("hook", 3),
-            ("problem", 5),
-            ("twist", 5),
-            ("demo", 7),
+            ("pain", 5),
+            ("value", 7),
+            ("proof", 7),
             ("cta", 5),
         ]
     if duration_seconds <= 45:
         return [
             ("hook", 3),
-            ("problem", 6),
-            ("twist", 7),
-            ("demo", 8),
-            ("proof", 8),
+            ("pain", 6),
+            ("value", 8),
+            ("proof", 10),
             ("cta", 6),
         ]
     return [
         ("hook", 3),
-        ("problem", 7),
-        ("twist", 8),
-        ("demo", 10),
-        ("proof", 10),
-        ("cta", 7),
+        ("pain", 7),
+        ("value", 10),
+        ("proof", 12),
+        ("cta", 8),
     ]
 
 
-def _topic_seed(raw_input: str) -> str:
-    """Brief'ten kısa konu çekirdeği — tekrar için değil, bağlam için."""
-    cleaned = re.sub(r"\s+", " ", raw_input.strip())
-    return cleaned[:90]
+def _action_label(desired_action: str, *, en: bool) -> str:
+    labels = {
+        "dm": ("DM me now", "Hemen DM at"),
+        "link_click": ("Tap the link", "Linke tıkla"),
+        "buy": ("Buy now", "Hemen satın al"),
+        "lead_form": ("Fill the form", "Formu doldur"),
+        "whatsapp": ("Message on WhatsApp", "WhatsApp’tan yaz"),
+    }
+    pair = labels.get(desired_action, labels["dm"])
+    return pair[0] if en else pair[1]
 
 
 def _mock_script(
@@ -80,108 +90,107 @@ def _mock_script(
     style: str,
     audience: str | None,
     raw_input: str,
+    offer: str = "",
+    pain_point: str = "",
+    desired_action: str = "dm",
 ) -> dict[str, Any]:
-    """Tekrar etmeyen, Shorts ritminde mock senaryo."""
+    """Dönüşüm odaklı mock reklam senaryosu."""
     en = language.lower().startswith("en")
     topic = _topic_seed(raw_input)
-    who = audience or ("viewers" if en else "izleyici")
+    who = audience or ("buyers" if en else "müşteri")
+    offer_t = (offer or topic)[:80]
+    pain_t = (pain_point or topic)[:80]
+    cta_t = _action_label(desired_action, en=en)
     plan = _scene_plan(duration_seconds)
 
     if en:
+        hooks = [
+            {"id": "A", "text": f"Still stuck with {pain_t}?", "angle": "pain"},
+            {"id": "B", "text": f"What if {offer_t} fixed that in days?", "angle": "result"},
+            {"id": "C", "text": f"Stop scrolling if you want {offer_t}.", "angle": "pattern_interrupt"},
+        ]
         beats = {
             "hook": (
-                f"Stop scrolling — {topic.split('.')[0][:50]}",
-                "Extreme close-up, snap zoom, high contrast",
+                hooks[0]["text"],
+                "UGC close-up, snap zoom, high contrast text",
                 "WAIT.",
                 "zoom-punch",
             ),
-            "problem": (
-                f"Most {who} waste time guessing instead of a clear system.",
-                "Handheld frustration montage, quick jump cuts",
-                "The real problem",
+            "pain": (
+                f"Most {who} keep paying for the wrong fix — and {pain_t} stays.",
+                "Handheld frustration, quick jump cuts",
+                "The real pain",
                 "hard-cut",
             ),
-            "twist": (
-                f"The fix isn't more effort — it's a tighter {style} edit.",
-                "Match-cut to clean desk / product insert",
-                "Here's the shift",
+            "value": (
+                f"Here's the shift: {offer_t} — built for {who}.",
+                "Product insert + clean text-pop",
+                "The offer",
                 "match-cut",
             ),
-            "demo": (
-                "Watch one clean move: setup → proof → payoff in seconds.",
-                "POV screen + kinetic captions, 3 beat inserts",
-                "Do this",
-                "whip",
-            ),
             "proof": (
-                "Same idea, sharper cut — retention jumps when every second earns its place.",
+                "Same problem, clearer result — one simple move, visible payoff.",
                 "Before/after split, punch-in on result",
                 "Proof",
                 "hard-cut",
             ),
             "cta": (
-                "Save this. Try it on your next Short. Follow for more edit systems.",
-                "End card, bold text pop, subtle push-in",
-                "Save + try",
+                f"{cta_t}. Do it before you forget.",
+                "End card, bold CTA text, subtle push-in",
+                cta_t,
                 "zoom-punch",
             ),
         }
-        lang_title = title or "Shorts Cut"
-        hook = beats["hook"][0]
-        music = "100–110bpm dry punchy, no soft pad"
-        cta = "Save this · try it on your next Short"
-        edit_notes = "Hard cuts every 2–4s, captions always on, never hold a static wide."
+        lang_title = title or "Ad Script"
+        music = "105bpm dry punchy, conversion energy"
+        edit_notes = "Hard cuts every 2–4s, captions on, CTA readable in last 3s."
     else:
+        hooks = [
+            {"id": "A", "text": f"Hâlâ {pain_t} ile mi uğraşıyorsun?", "angle": "pain"},
+            {"id": "B", "text": f"{offer_t} bunu günler içinde çözse?", "angle": "result"},
+            {"id": "C", "text": f"{offer_t} istiyorsan kaydırmayı bırak.", "angle": "pattern_interrupt"},
+        ]
         beats = {
             "hook": (
-                f"Dur. {topic.split('.')[0][:50]} — bunu yanlış yapıyorsun.",
-                "Aşırı close-up, ani zoom-punch, yüksek kontrast",
+                hooks[0]["text"],
+                "UGC close-up, ani zoom-punch, yüksek kontrast yazı",
                 "DUR.",
                 "zoom-punch",
             ),
-            "problem": (
-                f"Çoğu {who} aynı hatayı tekrar ediyor: fikir var, ritim yok.",
-                "El kamerası montaj, hızlı jump-cut'lar",
-                "Asıl sorun",
+            "pain": (
+                f"Çoğu {who} yanlış çözüme para yakıyor — {pain_t} bitmiyor.",
+                "El kamerası montaj, hızlı jump-cut",
+                "Asıl acı",
                 "hard-cut",
             ),
-            "twist": (
-                f"Çözüm daha çok çekim değil — {style} bir Shorts kurgusu.",
-                "Match-cut ile temiz insert / ürün detayı",
-                "Kırılma noktası",
+            "value": (
+                f"Kırılma: {offer_t} — {who} için net çözüm.",
+                "Ürün insert + temiz text-pop",
+                "Teklif",
                 "match-cut",
             ),
-            "demo": (
-                "Tek net hareket: kurulum → kanıt → payoff. Her saniye iş yapsın.",
-                "POV + kinetik caption, 3 vuruşluk insert",
-                "Bunu yap",
-                "whip",
-            ),
             "proof": (
-                "Aynı fikir, daha sert kesim — her kare hak edince izlenme uzar.",
+                "Aynı sorun, daha net sonuç — tek hareket, görünür payoff.",
                 "Önce/sonra split, sonuca punch-in",
                 "Kanıt",
                 "hard-cut",
             ),
             "cta": (
-                "Kaydet. Bir sonraki Short'unda dene. Daha fazla kurgu sistemi için takip et.",
-                "End card, kalın text-pop, hafif push-in",
-                "Kaydet + dene",
+                f"{cta_t}. Unutmadan şimdi yap.",
+                "End card, kalın CTA yazısı, hafif push-in",
+                cta_t,
                 "zoom-punch",
             ),
         }
-        lang_title = title or "Shorts Kurgu"
-        hook = beats["hook"][0]
-        music = "100–110bpm kuru vuruşlu, yumuşak pad yok"
-        cta = "Kaydet · bir sonraki Short'unda dene"
-        edit_notes = "2–4 sn'de bir hard-cut, caption hep açık, statik wide tutma."
+        lang_title = title or "Reklam Senaryosu"
+        music = "105bpm kuru vuruşlu, dönüşüm enerjisi"
+        edit_notes = "2–4 sn’de hard-cut, caption açık, son 3 sn CTA okunaklı."
 
     scenes: list[dict[str, Any]] = []
     t = 0
     narrations: list[str] = []
     for i, (role, dur) in enumerate(plan):
         narration, visual, on_screen, cut = beats[role]
-        # Son sahnenin süresini toplam süreye oturt
         if i == len(plan) - 1:
             dur = max(2, duration_seconds - t)
         end = t + dur
@@ -201,12 +210,28 @@ def _mock_script(
 
     return {
         "title": lang_title,
-        "format": "shorts_9x16",
-        "hook": hook,
+        "format": "ads_9x16",
+        "hook": hooks[0]["text"],
+        "hook_variants": hooks,
+        "conversion_score": {
+            "total": 78,
+            "hook_strength": 82,
+            "offer_clarity": 80,
+            "cta_clarity": 74,
+            "note": "Hook acıyı yakalıyor; CTA net. Kanıt sahnesi güçlendirilebilir."
+            if not en
+            else "Hook hits the pain; CTA is clear. Proof beat can be stronger.",
+        },
         "voiceover_full": " ".join(narrations),
         "music_mood": music,
-        "cta": cta,
+        "cta": cta_t,
         "edit_notes": edit_notes,
+        "brief": {
+            "offer": offer,
+            "pain_point": pain_point,
+            "desired_action": desired_action,
+            "ad_format": style,
+        },
         "scenes": scenes,
         "_mock": True,
     }
@@ -222,6 +247,9 @@ async def professionalize_prompt(
     style: str,
     audience: str | None,
     raw_input: str,
+    offer: str = "",
+    pain_point: str = "",
+    desired_action: str = "dm",
 ) -> dict[str, Any]:
     settings = get_settings()
     api_key = _get_user_openrouter_key(db, user)
@@ -234,6 +262,9 @@ async def professionalize_prompt(
             style=style,
             audience=audience,
             raw_input=raw_input,
+            offer=offer,
+            pain_point=pain_point,
+            desired_action=desired_action,
         )
 
     if not api_key:
@@ -249,13 +280,17 @@ async def professionalize_prompt(
         "language": language,
         "title": title,
         "duration_seconds": duration_seconds,
-        "style": style,
+        "ad_format": style,
         "audience": audience,
-        "format": "youtube_shorts_9x16",
+        "offer": offer,
+        "pain_point": pain_point,
+        "desired_action": desired_action,
+        "format": "ads_9x16",
         "user_brief": raw_input,
         "editor_mandate": (
-            "Brief'i tekrar etme. Shorts uzmanı + video editörü gibi "
-            "hook→problem→twist→demo→cta ritminde yeniden yaz."
+            "Brief'i tekrar etme. Performance reklamcı gibi "
+            "hook→pain→value→proof→cta ritminde yeniden yaz. "
+            "3 hook varyantı + conversion_score zorunlu."
         ),
     }
 
@@ -314,5 +349,39 @@ async def professionalize_prompt(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail="Senaryo şeması geçersiz",
         )
-    script.setdefault("format", "shorts_9x16")
+    script.setdefault("format", "ads_9x16")
+    script.setdefault(
+        "brief",
+        {
+            "offer": offer,
+            "pain_point": pain_point,
+            "desired_action": desired_action,
+            "ad_format": style,
+        },
+    )
+    if not script.get("hook_variants"):
+        hook = str(script.get("hook") or "")
+        script["hook_variants"] = [
+            {"id": "A", "text": hook, "angle": "pain"},
+            {"id": "B", "text": hook, "angle": "result"},
+            {"id": "C", "text": hook, "angle": "curiosity"},
+        ]
+    if not script.get("conversion_score"):
+        script["conversion_score"] = {
+            "total": 70,
+            "hook_strength": 70,
+            "offer_clarity": 70,
+            "cta_clarity": 70,
+            "note": "Skor model yanıtında eksikti; varsayılan atandı.",
+        }
+    else:
+        score = script["conversion_score"]
+        if isinstance(score, dict):
+            for k in ("total", "hook_strength", "offer_clarity", "cta_clarity"):
+                try:
+                    score[k] = max(0, min(100, int(float(score.get(k, 0)))))
+                except (TypeError, ValueError):
+                    score[k] = 0
+            score.setdefault("note", "")
+            script["conversion_score"] = score
     return script

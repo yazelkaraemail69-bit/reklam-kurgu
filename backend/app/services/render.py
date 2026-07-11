@@ -99,7 +99,7 @@ def _draw_frame(scene: dict[str, Any] | None, t: float, duration: float) -> np.n
     if cut:
         draw.text((W - 28 - draw.textlength(cut, font=badge_font), 58), cut, font=badge_font, fill=(170, 176, 168))
 
-    caption = str((scene or {}).get("on_screen_text") or (scene or {}).get("narration") or "Shorts")
+    caption = str((scene or {}).get("on_screen_text") or (scene or {}).get("narration") or "Reklam")
     title_font = _font(54)
     lines = _wrap(draw, caption, title_font, W - 100)
     y = int(H * 0.62)

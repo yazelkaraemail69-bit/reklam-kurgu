@@ -13,6 +13,7 @@ from PIL import Image, ImageDraw, ImageFont
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
+from app.constitution import wrap_visual_prompt
 from app.models import User
 from app.services.director.integration import resolve_openrouter_key, verify_openrouter
 
@@ -99,14 +100,16 @@ def _image_prompt(scene: dict[str, Any], style: str, language: str) -> str:
     visual = scene.get("visual") or ""
     role = scene.get("role") or "scene"
     text = scene.get("on_screen_text") or ""
-    return (
-        f"Vertical 9:16 cinematic still for YouTube Shorts. "
-        f"Role: {role}. Style: {style}. "
+    raw = (
+        f"Vertical 9:16 performance AD still for Meta/TikTok/YouTube Shorts ads. "
+        f"Role beat: {role}. Style angle: {style}. "
         f"Shot description: {visual}. "
-        f"Mood lighting, professional color grade, no watermark, no UI chrome. "
-        f"Do not render long paragraphs of text; optional tiny title '{text}'. "
+        f"Agency-grade, conversion-focused framing, product clarity, "
+        f"no watermark, no UI chrome. "
+        f"Do not render long paragraphs; optional tiny title '{text}'. "
         f"Language context: {language}."
     )
+    return wrap_visual_prompt(raw, platform_id="tiktok")
 
 
 async def _generate_via_openrouter(

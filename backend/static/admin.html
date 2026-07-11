@@ -2,39 +2,41 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Admin · Video API Merkezi</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Admin · Reklamvitrin</title>
+  <meta name="theme-color" content="#064e3b" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/styles.css" />
-  <link rel="stylesheet" href="/static/admin.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/styles.css?v=twin1" />
+  <link rel="stylesheet" href="/static/admin.css?v=twin1" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/img/favicon-32.png" />
 </head>
 <body>
-  <div class="bg-orb bg-orb-a" aria-hidden="true"></div>
-  <div class="bg-orb bg-orb-b" aria-hidden="true"></div>
+  <a class="skip-link" href="#adminMain">İçeriğe geç</a>
 
   <header class="topbar">
-    <div class="brand">
-      <span class="brand-mark" aria-hidden="true"></span>
-      <span class="brand-name">Admin Panel</span>
-    </div>
+    <a class="brand" href="/admin" aria-label="Reklamvitrin admin">
+      <img class="brand-logo" src="/static/img/logo-reklamvitrin.png" alt="Reklamvitrin.com" width="240" height="68" decoding="async" />
+      <span class="brand-badge">Admin</span>
+    </a>
     <div class="topbar-right">
       <a class="ghost-btn" href="/">Stüdyo</a>
       <button type="button" class="ghost-btn" id="logoutBtn">Çıkış</button>
     </div>
   </header>
 
-  <main class="admin-main">
+  <main class="admin-main" id="adminMain">
     <section id="gate" class="auth-panel" hidden>
+      <p class="auth-kicker">Reklamvitrin.com</p>
       <h1 class="display">Erişim yok</h1>
       <p class="lede" id="gateMsg">Bu panel yalnızca admin hesabına açık.</p>
-      <a class="primary-btn" href="/" style="text-align:center;text-decoration:none;display:inline-block">Stüdyoya dön</a>
+      <a class="primary-btn gate-back" href="/">Stüdyoya dön</a>
     </section>
 
     <section id="adminApp" hidden>
       <h1 class="display">Kontrol merkezi</h1>
-      <p class="lede">Kullanıcılar, krediler ve üretim özeti — yalnızca senin hesabın.</p>
+      <p class="lede">Kullanıcılar, krediler ve üretim özeti. Senin hesabın admin · kredi ∞.</p>
 
       <div class="stat-row" id="statRow">
         <div class="stat"><span class="stat-n" id="statUsers">—</span><span class="stat-l">Kullanıcı</span></div>
@@ -67,6 +69,12 @@
     </section>
   </main>
 
-  <script src="/static/admin.js"></script>
+  <footer class="site-footer">
+    <span>Reklamvitrin.com</span>
+    <span class="footer-sep" aria-hidden="true">·</span>
+    <span>Admin kontrol merkezi</span>
+  </footer>
+
+  <script src="/static/admin.js?v=twin1"></script>
 </body>
 </html>

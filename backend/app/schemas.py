@@ -137,24 +137,57 @@ class SceneOut(BaseModel):
     visual: str
     narration: str
     on_screen_text: str = ""
+    role: str = ""
+    cut: str = ""
+    image: str | None = None
+
+    model_config = {"extra": "allow"}
+
+
+class ConversionScoreOut(BaseModel):
+    total: int = 0
+    hook_strength: int = 0
+    offer_clarity: int = 0
+    cta_clarity: int = 0
+    note: str = ""
+
+    model_config = {"extra": "allow"}
+
+
+class HookVariantOut(BaseModel):
+    id: str = "A"
+    text: str = ""
+    angle: str = ""
+
+    model_config = {"extra": "allow"}
 
 
 class ProfessionalScript(BaseModel):
-    title: str
-    hook: str
-    voiceover_full: str
-    music_mood: str
-    cta: str
-    scenes: list[SceneOut]
+    title: str = ""
+    hook: str = ""
+    voiceover_full: str = ""
+    music_mood: str = ""
+    cta: str = ""
+    scenes: list[SceneOut] = []
     mock: bool = False
+    format: str = "ads_9x16"
+    edit_notes: str = ""
+    hook_variants: list[HookVariantOut] = []
+    conversion_score: ConversionScoreOut | dict | None = None
+    brief: dict | None = None
+
+    model_config = {"extra": "allow"}
 
 
 class ScenarioProfessionalizeRequest(BaseModel):
     language: str = Field(default="tr", max_length=10)
     title: str | None = Field(default=None, max_length=200)
     duration_seconds: int = Field(default=30, ge=5, le=300)
-    style: str = Field(default="profesyonel", max_length=80)
+    style: str = Field(default="pas", max_length=80)
     audience: str | None = Field(default=None, max_length=200)
+    offer: str = Field(min_length=3, max_length=300)
+    pain_point: str = Field(min_length=3, max_length=300)
+    desired_action: str = Field(default="dm", max_length=40)
     raw_input: str = Field(min_length=10, max_length=4000)
 
 
@@ -169,6 +202,10 @@ class ScenarioDiscussRequest(BaseModel):
     message: str = Field(min_length=2, max_length=2000)
 
 
+class ScenarioSelectHookRequest(BaseModel):
+    hook: str = Field(min_length=2, max_length=400)
+
+
 class ScenarioOut(BaseModel):
     id: int
     language: str
@@ -177,7 +214,7 @@ class ScenarioOut(BaseModel):
     style: str
     audience: str | None
     raw_input: str
-    professional_script: ProfessionalScript | dict
+    professional_script: dict
     status: str
     copy_unlocked: bool = False
     copy_unlock_cost: int = 5
@@ -202,6 +239,55 @@ class PricingOut(BaseModel):
     cogs_notes: dict[str, str]
     initial_credits: int
     full_30s_bundle: int
+
+
+# --- Creative (ürün analizi / metin / platform görsel) ---
+
+
+class CreativeCatalogOut(BaseModel):
+    platforms: list[dict]
+    copy_types: list[dict]
+    costs: dict[str, int]
+    constitution_id: str = "reklam-kurgu-visual-constitution-v1"
+    constitution_locked: bool = True
+    deviation_allowed: bool = False
+
+
+class ProductAnalyzeOut(BaseModel):
+    image_url: str
+    analysis: dict
+    credit_cost: int
+
+
+class CopyGenerateRequest(BaseModel):
+    analysis: dict
+    copy_types: list[str] = Field(min_length=1)
+    language: str = Field(default="tr", max_length=10)
+    offer: str = Field(default="", max_length=300)
+    pain_point: str = Field(default="", max_length=300)
+    desired_action: str = Field(default="dm", max_length=40)
+    audience: str | None = Field(default=None, max_length=200)
+    extra_brief: str | None = Field(default=None, max_length=2000)
+
+
+class CopyGenerateOut(BaseModel):
+    copies: dict
+    mock: bool = False
+    credit_cost: int = 12
+
+
+class VisualGenerateRequest(BaseModel):
+    analysis: dict
+    platforms: list[str] = Field(min_length=1)
+    language: str = Field(default="tr", max_length=10)
+    offer: str = Field(default="", max_length=300)
+    style: str = Field(default="pas", max_length=80)
+
+
+class VisualGenerateOut(BaseModel):
+    visuals: list[dict]
+    mock: bool = False
+    credit_cost: int = 15
 
 
 # --- Jobs (Modül 3 / 4) ---
@@ -229,7 +315,7 @@ class VideoJobOut(BaseModel):
     id: int
     scenario_id: int
     status: str
-    script_snapshot: ProfessionalScript | dict
+    script_snapshot: dict
     audio_url: str | None = None
     video_url: str | None = None
     preview_url: str | None = None
