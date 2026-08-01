@@ -1,0 +1,20 @@
+version: "3.8"
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/data:/data
+      - ./backend/.env:/app/.env:ro
+    environment:
+      DATABASE_URL: sqlite:////data/app.db
+      MOCK_AI: "true"
+      DEBUG: "false"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

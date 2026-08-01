@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.admin_access import has_unlimited_credits
@@ -37,10 +38,9 @@ def apply_credit_change(
             detail="Kredi miktarı 0 olamaz",
         )
 
-    balance = ensure_balance_row(db, user, initial=0)
-
-    # Admin: harcama düşülmez (sonsuz kredi)
+    # Admin: harcama düşülmez
     if amount < 0 and has_unlimited_credits(user):
+        ensure_balance_row(db, user, initial=0)
         db.add(
             CreditTransaction(
                 user_id=user.id,
@@ -51,7 +51,21 @@ def apply_credit_change(
             )
         )
         db.flush()
-        return balance
+        return db.get(CreditBalance, user.id) or CreditBalance(user_id=user.id, balance=0)
+
+    # Satır kilidi — yarışı önle
+    stmt = select(CreditBalance).where(CreditBalance.user_id == user.id)
+    if db.bind.dialect.name == "sqlite":
+        # SQLite'ta kontrol önce, sonra update
+        balance = db.scalar(stmt)
+    else:
+        balance = db.scalar(stmt.with_for_update())
+
+    if balance is None:
+        balance = ensure_balance_row(db, user, initial=0)
+        db.flush()
+        if db.bind.dialect.name != "sqlite":
+            balance = db.scalar(stmt.with_for_update())
 
     new_balance = balance.balance + amount
 

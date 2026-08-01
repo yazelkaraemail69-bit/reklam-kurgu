@@ -50,11 +50,21 @@ def _esc(s: str) -> str:
     )
 
 
+def _escape_json_in_script(obj: dict[str, Any]) -> str:
+    """JSON'u <script> bloğu içinde güvenle kullan — </script> kaçış ve kontrol karakterleri."""
+    s = json.dumps(obj, ensure_ascii=False)
+    s = s.replace("</script>", r"<\/script>")
+    s = s.replace("<!--", r"<\!--")
+    s = s.replace("-->", r"--\>")
+    return s
+
+
 def _preview_html(manifest: dict[str, Any], audio_filename: str) -> str:
-    scenes_json = json.dumps(manifest.get("scenes") or [], ensure_ascii=False)
+    scenes_json = _escape_json_in_script(manifest.get("scenes") or [])
     title = _esc(manifest.get("title") or "Reklam")
     hook = _esc(manifest.get("hook") or "")
     cta = _esc(manifest.get("cta") or "")
+    audio_filename_esc = _esc(audio_filename)
     duration = int(manifest.get("duration_seconds") or 30)
     return f"""<!DOCTYPE html>
 <html lang="tr">
@@ -152,7 +162,7 @@ def _preview_html(manifest: dict[str, Any], audio_filename: str) -> str:
     </div>
     <button type="button" class="play-hit" id="playHit" aria-label="Oynat"><span>▶</span></button>
   </div>
-  <audio id="audio" controls src="{audio_filename}"></audio>
+  <audio id="audio" controls src="{audio_filename_esc}"></audio>
   <p class="meta"><strong>{title}</strong><br/>9:16 reklam · {duration}s · CTA: {cta}</p>
 </div>
 <script>

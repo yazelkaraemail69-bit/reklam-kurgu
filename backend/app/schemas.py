@@ -282,6 +282,7 @@ class VisualGenerateRequest(BaseModel):
     language: str = Field(default="tr", max_length=10)
     offer: str = Field(default="", max_length=300)
     style: str = Field(default="pas", max_length=80)
+    product_image_base64: str | None = Field(default=None, max_length=2000000)
 
 
 class VisualGenerateOut(BaseModel):

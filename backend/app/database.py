@@ -71,3 +71,11 @@ def init_db() -> None:
                             "ALTER TABLE scenarios ADD COLUMN discussion_log TEXT NOT NULL DEFAULT '[]'"
                         )
                     )
+        if "users" in insp.get_table_names():
+            cols = {c["name"] for c in insp.get_columns("users")}
+            if "is_admin" not in cols:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN is_admin BOOLEAN NOT NULL DEFAULT 0"))
+            if "email_verified" not in cols:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE users ADD COLUMN email_verified BOOLEAN NOT NULL DEFAULT 0"))

@@ -208,6 +208,7 @@ async def generate_visuals(
             language=payload.language,
             offer=payload.offer,
             style=payload.style,
+            product_image_base64=payload.product_image_base64,
         )
     except Exception as exc:  # noqa: BLE001
         apply_credit_change(
