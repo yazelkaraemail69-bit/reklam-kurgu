@@ -20,6 +20,7 @@ from app.services.director.ai2_visuals import run_visual_agent
 from app.services.director.ai3_editor import run_editor_agent
 from app.services.director.critique import apply_critique_feedback, build_critique_report
 from app.services.elevenlabs import synthesize_voiceover
+from app.services.music import generate_music
 from app.services.pricing import produce_credit_cost, refine_credit_cost
 from app.services.video import render_storyboard_video
 
@@ -152,6 +153,13 @@ async def execute_produce_job(job_id: int) -> None:
                 language=scenario.language,
             )
             audio_file = "voice.wav" if (job_dir / "voice.wav").exists() else "voice.mp3"
+
+            # Müzik üretimi (şu an mock; Meta MusicGen placeholder)
+            await generate_music(
+                out_path=job_dir / "music.mp3",
+                description=script.get("music_mood") or "upbeat conversion-focused commercial",
+                duration_seconds=scenario.duration_seconds,
+            )
 
             edited = run_editor_agent(
                 job_dir=job_dir,

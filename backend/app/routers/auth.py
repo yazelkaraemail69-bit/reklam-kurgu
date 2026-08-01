@@ -1,7 +1,7 @@
 import secrets
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -33,7 +33,7 @@ def _user_out(db: Session, user: User) -> UserOut:
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
-def register(payload: UserRegister, db: Session = Depends(get_db)) -> TokenResponse:
+def register(payload: UserRegister, db: Session = Depends(get_db)) -> Response:
     existing = db.scalar(select(User).where(User.email == payload.email.lower()))
     if existing:
         raise HTTPException(
@@ -78,11 +78,27 @@ def register(payload: UserRegister, db: Session = Depends(get_db)) -> TokenRespo
 
     db.commit()
     token = create_access_token(user.id, extra={"email": user.email})
-    return TokenResponse(access_token=token)
+
+    from fastapi.responses import JSONResponse
+
+    response = JSONResponse(
+        content=TokenResponse(access_token=token).model_dump(),
+        status_code=status.HTTP_201_CREATED,
+    )
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        max_age=86400,
+        httponly=True,
+        secure=False,
+        samesite="strict",
+    )
+    return response
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(payload: UserLogin, db: Session = Depends(get_db)) -> TokenResponse:
+def login(payload: UserLogin, db: Session = Depends(get_db)) -> Response:
+    """Login — HttpOnly cookie'ye token set et."""
     try:
         check_login_rate_limit(payload.email.lower())
     except PermissionError as exc:
@@ -106,8 +122,25 @@ def login(payload: UserLogin, db: Session = Depends(get_db)) -> TokenResponse:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Hesap pasif",
         )
+
     token = create_access_token(user.id, extra={"email": user.email})
-    return TokenResponse(access_token=token)
+
+    # Token'ı JSON + HttpOnly cookie'de döndür
+    from fastapi.responses import JSONResponse
+
+    response = JSONResponse(
+        content=TokenResponse(access_token=token).model_dump(),
+        status_code=status.HTTP_200_OK,
+    )
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        max_age=86400,  # 24 hours
+        httponly=True,  # JS'den erişilemiyor
+        secure=False,  # HTTPS-only (prod'da True)
+        samesite="strict",  # CSRF koruması
+    )
+    return response
 
 
 @router.get("/me", response_model=UserOut)

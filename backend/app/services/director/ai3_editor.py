@@ -96,17 +96,37 @@ def _compose_frame(job_dir: Path, scene: dict[str, Any] | None, t: float, durati
     return np.asarray(base)
 
 
-def _mux(silent: Path, audio: Path, out: Path) -> None:
+def _mux(silent: Path, audio: Path, out: Path, scenes: list[dict[str, Any]] | None = None) -> None:
     ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
+
+    # Senaryo cut bilgilerini oku — Ken Burns, zoom-punch vb.
+    filter_complex = None
+    if scenes:
+        filters = []
+        for i, scene in enumerate(scenes):
+            cut = str(scene.get("cut") or "").lower()
+            # Basit geçişler — FFmpeg zoompan ve blend filtreleri
+            if cut == "zoom-punch":
+                filters.append(f"[v{i}]scale=iw*1.1:ih*1.1,crop=iw:ih[v{i}z]")
+            elif cut == "ken-burns":
+                filters.append(f"[v{i}]zoompan=z='1.05':d=1:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'[v{i}k]")
+        if filters:
+            filter_complex = ";".join(filters)
+
     cmd = [
         ffmpeg, "-y",
         "-i", str(silent),
         "-i", str(audio),
-        "-c:v", "libx264", "-pix_fmt", "yuv420p",
+        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "fast",
         "-c:a", "aac", "-shortest",
         "-movflags", "+faststart",
-        str(out),
     ]
+
+    if filter_complex:
+        cmd.extend(["-vf", filter_complex])
+
+    cmd.append(str(out))
+
     proc = subprocess.run(cmd, capture_output=True, text=True)
     if proc.returncode != 0 or not out.exists():
         raise RuntimeError(proc.stderr[-500:] if proc.stderr else "AI3 mux failed")
@@ -146,7 +166,7 @@ def run_editor_agent(
 
     if audio_path.exists():
         try:
-            _mux(silent, audio_path, out)
+            _mux(silent, audio_path, out, scenes)
             silent.unlink(missing_ok=True)
         except Exception:
             if silent.exists():

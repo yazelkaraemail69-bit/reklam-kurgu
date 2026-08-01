@@ -58,6 +58,9 @@ class Settings(BaseSettings):
     # Senin hesabın: admin + sınırsız kredi (env ile override edilebilir)
     admin_email: str = "yazelkaraemail69@gmail.com"
 
+    # Stripe ödeme
+    stripe_key: str = ""
+
 
 @lru_cache
 def get_settings() -> Settings:
