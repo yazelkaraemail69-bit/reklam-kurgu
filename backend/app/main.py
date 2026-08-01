@@ -9,7 +9,8 @@ from fastapi.staticfiles import StaticFiles
 from app.constitution import CONSTITUTION_ID, VISUAL_CONSTITUTION, assert_ad_creative_intent
 from app.config import get_settings
 from app.database import init_db
-from app.routers import admin, api_keys, auth, creative, credits, jobs, media, scenarios
+from app.middleware import SecurityHeadersMiddleware
+from app.routers import admin, api_keys, auth, creative, credits, jobs, media, payments, scenarios
 
 STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 MEDIA_DIR = Path(__file__).resolve().parent.parent / "data" / "media"
@@ -38,33 +39,21 @@ def create_app() -> FastAPI:
         version="1.0.0",
         lifespan=lifespan,
     )
+    app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[
             "http://127.0.0.1:8000",
             "http://localhost:8000",
-            "http://127.0.0.1:8020",
-            "http://localhost:8020",
-            "http://127.0.0.1:8022",
-            "http://localhost:8022",
-            "http://127.0.0.1:8023",
-            "http://localhost:8023",
-            "http://127.0.0.1:8024",
-            "http://localhost:8024",
-            "http://127.0.0.1:8010",
-            "http://127.0.0.1:8011",
-            "http://127.0.0.1:8012",
-            "http://127.0.0.1:8013",
-            "http://127.0.0.1:8014",
-            "http://127.0.0.1:8015",
-        ],
+        ] if settings.debug else ["https://example.com"],  # Deploy'da domain set et
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PATCH", "DELETE"],
+        allow_headers=["Authorization", "Content-Type"],
     )
     app.include_router(auth.router, prefix="/api")
     app.include_router(api_keys.router, prefix="/api")
     app.include_router(credits.router, prefix="/api")
+    app.include_router(payments.router, prefix="/api")
     app.include_router(scenarios.router, prefix="/api")
     app.include_router(creative.router, prefix="/api")
     app.include_router(jobs.router, prefix="/api")

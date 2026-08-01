@@ -96,6 +96,7 @@ def _visual_prompt(
     offer: str,
     style: str,
     language: str,
+    product_image_base64: str | None = None,
 ) -> str:
     name = analysis.get("product_name") or "product"
     desc = analysis.get("visual_description") or ""
@@ -115,6 +116,7 @@ def _visual_prompt(
         f"Language context: {language}. "
         f"Extra platform craft: {PLATFORM_CREATIVE_RULES.get(platform_id, '')}"
     )
+    # TODO: product_image_base64 varsa img2img/controlnet reference olarak ekle
     return wrap_visual_prompt(raw, platform_id=platform_id)
 
 
@@ -128,6 +130,7 @@ async def generate_platform_visuals(
     language: str = "tr",
     offer: str = "",
     style: str = "pas",
+    product_image_base64: str | None = None,
 ) -> list[dict[str, Any]]:
     ids = [p for p in platforms if p in PLATFORMS]
     if not ids:
@@ -167,6 +170,7 @@ async def generate_platform_visuals(
                 offer=offer,
                 style=style,
                 language=language,
+                product_image_base64=product_image_base64,
             )
             # generate then resize to exact platform size
             tmp = out_dir / f"_tmp_{pid}.png"

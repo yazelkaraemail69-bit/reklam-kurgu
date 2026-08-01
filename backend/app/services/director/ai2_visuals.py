@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import re
 from pathlib import Path
@@ -232,28 +233,41 @@ async def run_visual_agent(
     check = await verify_openrouter(api_key)
 
     scenes = list(script.get("scenes") or [])
-    outputs: list[dict[str, Any]] = []
     mock = bool(settings.mock_ai)
 
-    for scene in scenes:
+    async def generate_scene(scene: dict[str, Any]) -> tuple[dict[str, Any], int]:
         idx = int(scene.get("index") or 0)
         if only_indices is not None and idx not in only_indices:
-            # mevcut dosyayı koru
             existing = scenes_dir / f"scene_{idx:02d}.jpg"
             if existing.exists():
-                outputs.append({"index": idx, "path": str(existing), "kept": True})
-            continue
+                return ({"index": idx, "path": str(existing), "kept": True}, idx)
+            # Mevcut dosya yok ve sadece belirli sahneler değişiyor
+            return ({"index": idx, "path": None, "skipped": True}, idx)
 
         out_path = scenes_dir / f"scene_{idx:02d}.jpg"
         if mock or not api_key:
             _mock_scene_image(scene, out_path, w, h)
-            outputs.append({"index": idx, "path": str(out_path), "mock": True})
+            return ({"index": idx, "path": str(out_path), "mock": True}, idx)
         else:
             prompt = _image_prompt(scene, style, language)
             await _generate_via_openrouter(api_key, prompt, out_path)
-            outputs.append({"index": idx, "path": str(out_path), "mock": False})
+            return ({"index": idx, "path": str(out_path), "mock": False}, idx)
 
-        scene["image"] = f"scenes/scene_{idx:02d}.jpg"
+    # Görsel üretimini paralel yap — 5 sahne ~75sn → ~15sn
+    tasks = [generate_scene(scene) for scene in scenes]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    outputs: list[dict[str, Any]] = []
+    for result in results:
+        if isinstance(result, Exception):
+            raise result
+        out_dict, idx = result
+        if out_dict.get("path"):
+            outputs.append(out_dict)
+            for scene in scenes:
+                if int(scene.get("index") or 0) == idx:
+                    scene["image"] = f"scenes/scene_{idx:02d}.jpg"
+                    break
 
     return {
         "agent": "AI2_visual",
